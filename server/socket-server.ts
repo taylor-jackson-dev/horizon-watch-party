@@ -3,6 +3,7 @@ import express from "express";
 import { Server as IOServer, type Socket } from "socket.io";
 import { prisma } from "@/lib/prisma";
 import { verifySocketToken, type SocketTokenClaims } from "@/lib/socket-token";
+import { MESSAGE_MAX_LENGTH } from "@/lib/config";
 
 const PORT = Number(process.env.SOCKET_PORT ?? 3001);
 
@@ -38,6 +39,28 @@ const roomStates = new Map<string, VideoState>();
 // Expired/invalidated by `room:host-changed` (not implemented yet —
 // hostId on the Room model doesn't change in Phase 3).
 const roomHosts = new Map<string, string>();
+
+// ── Chat rate limiting ────────────────────────────────────────────
+// Sliding-window per (userId, roomId). The DB-side CHAT_RATE_LIMIT_PER_MINUTE
+// in config.ts is a coarser policy for future Redis enforcement; this
+// in-memory limiter is the fast guard that runs on every send.
+const CHAT_RATE_LIMIT_COUNT = 5;
+const CHAT_RATE_LIMIT_WINDOW_MS = 5_000;
+const chatRateLimits = new Map<string, number[]>();
+
+function checkChatRateLimit(userId: string, roomId: string): boolean {
+  const key = `${userId}:${roomId}`;
+  const now = Date.now();
+  const cutoff = now - CHAT_RATE_LIMIT_WINDOW_MS;
+  const recent = (chatRateLimits.get(key) ?? []).filter((t) => t > cutoff);
+  if (recent.length >= CHAT_RATE_LIMIT_COUNT) {
+    chatRateLimits.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  chatRateLimits.set(key, recent);
+  return true;
+}
 
 async function getRoomHost(roomId: string): Promise<string | null> {
   const cached = roomHosts.get(roomId);
@@ -237,6 +260,94 @@ io.on("connection", (socket: Socket) => {
       if (!member || member.status !== "ACTIVE") return;
 
       socket.to(roomChannel(roomId)).emit("queue:changed");
+    },
+  );
+
+  // ── Chat ────────────────────────────────────────────────────────
+  // Any ACTIVE member with chat enabled can send. The server is the
+  // source of truth: it persists first, then broadcasts the canonical
+  // record (id + server timestamp) to the entire room INCLUDING the
+  // sender — so every client renders the same persisted shape and
+  // there's no optimistic/reconcile dance on the client.
+  socket.on(
+    "chat:send",
+    async (
+      payload: { roomId?: string; content?: string },
+      cb?: (response: { ok: boolean; error?: string }) => void,
+    ) => {
+      const roomId = payload?.roomId;
+      const rawContent = typeof payload?.content === "string" ? payload.content : "";
+      const content = rawContent.trim();
+
+      if (!roomId || typeof roomId !== "string") {
+        return cb?.({ ok: false, error: "roomId is required" });
+      }
+      if (!content) {
+        return cb?.({ ok: false, error: "Message is empty" });
+      }
+      if (content.length > MESSAGE_MAX_LENGTH) {
+        return cb?.({
+          ok: false,
+          error: `Message too long (max ${MESSAGE_MAX_LENGTH})`,
+        });
+      }
+      if (!s.data.rooms.has(roomChannel(roomId))) {
+        return cb?.({ ok: false, error: "Not joined to this room" });
+      }
+      if (!checkChatRateLimit(userId, roomId)) {
+        return cb?.({ ok: false, error: "slow_down" });
+      }
+
+      try {
+        const member = await prisma.roomMember.findUnique({
+          where: { roomId_userId: { roomId, userId } },
+          select: {
+            status: true,
+            isChatRestricted: true,
+            room: { select: { chatEnabled: true } },
+          },
+        });
+        if (!member || member.status !== "ACTIVE") {
+          return cb?.({ ok: false, error: "Not an active member" });
+        }
+        if (!member.room.chatEnabled) {
+          return cb?.({ ok: false, error: "Chat is disabled in this room" });
+        }
+        if (member.isChatRestricted) {
+          return cb?.({ ok: false, error: "You are restricted from chat in this room" });
+        }
+
+        const created = await prisma.message.create({
+          data: { roomId, userId, content, type: "TEXT" },
+          select: {
+            id: true,
+            roomId: true,
+            userId: true,
+            content: true,
+            type: true,
+            createdAt: true,
+            user: { select: { displayName: true, avatarUrl: true } },
+          },
+        });
+
+        const wire = {
+          id: created.id,
+          roomId: created.roomId,
+          userId: created.userId,
+          userDisplayName: created.user.displayName,
+          userAvatarUrl: created.user.avatarUrl,
+          content: created.content,
+          type: created.type,
+          createdAt: created.createdAt.toISOString(),
+        };
+
+        io.to(roomChannel(roomId)).emit("chat:message", wire);
+        cb?.({ ok: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Server error";
+        log(`! chat:send failed user=${userId} room=${roomId} ${message}`);
+        cb?.({ ok: false, error: "Server error" });
+      }
     },
   );
 });

@@ -22,7 +22,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
       ...roomPublicSelect,
       members: {
         where: { userId },
-        select: { role: true, status: true },
+        select: { role: true, status: true, isChatRestricted: true },
       },
       _count: { select: { members: { where: { status: "ACTIVE" } } } },
     },
@@ -32,6 +32,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
   const membership = room.members[0];
   const isMember = membership && membership.status !== "BANNED";
   const isHost = isMember && !forceViewer ? isHostRole(membership.role) : false;
+  const isChatRestricted = membership?.isChatRestricted ?? false;
 
   const queueItems = isMember
     ? await prisma.videoQueue.findMany({
@@ -54,7 +55,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
     : [];
 
   return (
-    <main className="min-h-screen px-4 py-10 max-w-3xl mx-auto space-y-6">
+    <main className="min-h-screen px-4 py-6 max-w-6xl mx-auto space-y-6">
       <Link href="/dashboard" className="text-sm text-brand-muted hover:text-brand-text">
         ← Back to dashboard
       </Link>
@@ -70,38 +71,35 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
           Status: {room.status}
           {" · "}
           {room._count.members}/{room.capacity} active
+          {membership && (
+            <>
+              {" · "}You are{" "}
+              <span className="text-brand-gold font-medium">{membership.role}</span>
+              {forceViewer && (
+                <span className="ml-1">
+                  (forced viewer via <code className="font-mono">?asViewer=1</code>)
+                </span>
+              )}
+            </>
+          )}
         </div>
       </header>
 
       {isMember ? (
-        <>
-          <section className="card space-y-2">
-            <p className="text-sm">
-              You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
-              {forceViewer && (
-                <span className="ml-2 text-xs text-brand-muted">
-                  (forced viewer mode via <code className="font-mono">?asViewer=1</code>)
-                </span>
-              )}
-            </p>
-            <p className="text-sm text-brand-muted">
-              Chat and reactions come in Phase 4.
-            </p>
-          </section>
-
-          <RoomShell
-            roomId={room.id}
-            initialItems={queueItems.map((item) => ({
-              ...item,
-              playedAt: item.playedAt?.toISOString() ?? null,
-              createdAt: item.createdAt.toISOString(),
-            }))}
-            currentUserId={userId}
-            isHost={isHost}
-            loopQueue={room.loopQueue}
-            loopSingle={room.loopSingle}
-          />
-        </>
+        <RoomShell
+          roomId={room.id}
+          initialItems={queueItems.map((item) => ({
+            ...item,
+            playedAt: item.playedAt?.toISOString() ?? null,
+            createdAt: item.createdAt.toISOString(),
+          }))}
+          currentUserId={userId}
+          isHost={isHost}
+          loopQueue={room.loopQueue}
+          loopSingle={room.loopSingle}
+          chatEnabled={room.chatEnabled}
+          isChatRestricted={isChatRestricted}
+        />
       ) : (
         <section className="card space-y-2">
           <p className="text-sm text-brand-muted">

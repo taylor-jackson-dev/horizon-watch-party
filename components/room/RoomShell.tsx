@@ -6,6 +6,7 @@ import { parseYouTubeVideoId } from "@/lib/youtube";
 import { YT_PLAYER_STATE } from "@/lib/youtube-iframe";
 import { VideoPlayer, type VideoPlayerHandle } from "./VideoPlayer";
 import { QueuePanel, type QueueItem } from "./QueuePanel";
+import { ChatPanel } from "./ChatPanel";
 
 interface RoomShellProps {
   roomId: string;
@@ -14,6 +15,8 @@ interface RoomShellProps {
   isHost: boolean;
   loopQueue: boolean;
   loopSingle: boolean;
+  chatEnabled: boolean;
+  isChatRestricted: boolean;
 }
 
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -45,6 +48,8 @@ export function RoomShell({
   isHost,
   loopQueue,
   loopSingle,
+  chatEnabled,
+  isChatRestricted,
 }: RoomShellProps) {
   const [items, setItems] = useState<QueueItem[]>(initialItems);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
@@ -336,43 +341,55 @@ export function RoomShell({
   );
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-2">
-        <VideoPlayer
-          ref={playerRef}
-          videoId={currentVideoId}
-          autoplay={isHost}
-          muted={!isHost}
-          controlsDisabled={false}
-          onReady={handleReady}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onEnded={handleEnded}
-          onCued={handleCued}
-        />
-        {currentItem && (
-          <div className="text-sm">
-            <span className="text-brand-muted">Now playing: </span>
-            <span className="font-medium">{currentItem.title}</span>
-            {!isHost && (
-              <span className="text-xs text-brand-muted ml-2">
-                (viewer — audio muted by default; click the unmute icon on the player to enable)
-              </span>
-            )}
-          </div>
-        )}
-        <SocketStatusLine status={socketStatus} error={socketError} />
-      </section>
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      <div className="space-y-6 min-w-0">
+        <section className="space-y-2">
+          <VideoPlayer
+            ref={playerRef}
+            videoId={currentVideoId}
+            autoplay={isHost}
+            muted={!isHost}
+            controlsDisabled={false}
+            onReady={handleReady}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onEnded={handleEnded}
+            onCued={handleCued}
+          />
+          {currentItem && (
+            <div className="text-sm">
+              <span className="text-brand-muted">Now playing: </span>
+              <span className="font-medium">{currentItem.title}</span>
+              {!isHost && (
+                <span className="text-xs text-brand-muted ml-2">
+                  (viewer — audio muted by default; click the unmute icon on the player to enable)
+                </span>
+              )}
+            </div>
+          )}
+          <SocketStatusLine status={socketStatus} error={socketError} />
+        </section>
 
-      <QueuePanel
-        roomId={roomId}
-        items={items}
-        currentItemId={currentItemId}
-        currentUserId={currentUserId}
-        isHost={isHost}
-        onChanged={handleQueueMutation}
-        onSelect={handleSelect}
-      />
+        <QueuePanel
+          roomId={roomId}
+          items={items}
+          currentItemId={currentItemId}
+          currentUserId={currentUserId}
+          isHost={isHost}
+          onChanged={handleQueueMutation}
+          onSelect={handleSelect}
+        />
+      </div>
+
+      <aside className="h-[500px] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-4">
+        <ChatPanel
+          roomId={roomId}
+          socket={socket}
+          currentUserId={currentUserId}
+          chatEnabled={chatEnabled}
+          isChatRestricted={isChatRestricted}
+        />
+      </aside>
     </div>
   );
 }
