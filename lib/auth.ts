@@ -10,6 +10,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthConfig } from "next-auth";
+import type { UserTier } from "@prisma/client";
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
@@ -98,7 +99,7 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id   = token.id   as string;
-        session.user.tier = token.tier as string;
+        session.user.tier = token.tier as UserTier;
       }
       return session;
     },

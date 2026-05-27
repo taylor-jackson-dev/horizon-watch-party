@@ -3,12 +3,13 @@
 // Without this, session.user.id and session.user.tier would be type errors.
 
 import type { DefaultSession } from "next-auth";
+import type { UserTier } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id:   string;
-      tier: string; // "FREE" | "PREMIUM"
+      tier: UserTier;
     } & DefaultSession["user"];
   }
 }

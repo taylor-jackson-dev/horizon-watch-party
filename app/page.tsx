@@ -18,7 +18,7 @@ export default function HomePage() {
         <a href="/dashboard" className="btn-primary text-center">
           Get Started
         </a>
-        <a href="/auth/signin" className="btn-ghost text-center">
+        <a href="/signin" className="btn-ghost text-center">
           Sign In
         </a>
       </div>

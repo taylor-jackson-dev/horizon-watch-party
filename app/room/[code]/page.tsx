@@ -1,16 +1,71 @@
-// app/room/[code]/page.tsx
-// Watch room page — implemented in Phase 2 (Room System)
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { roomPublicSelect } from "@/lib/rooms";
 
 interface RoomPageProps {
   params: { code: string };
 }
 
-export default function RoomPage({ params }: RoomPageProps) {
+export default async function RoomPage({ params }: RoomPageProps) {
+  const session = await auth();
+  if (!session?.user?.id) redirect(`/signin?callbackUrl=/room/${params.code}`);
+  const userId = session.user.id;
+
+  const room = await prisma.room.findUnique({
+    where: { joinCode: params.code },
+    select: {
+      ...roomPublicSelect,
+      members: {
+        where: { userId },
+        select: { role: true, status: true },
+      },
+      _count: { select: { members: { where: { status: "ACTIVE" } } } },
+    },
+  });
+
+  if (!room) notFound();
+  const membership = room.members[0];
+  const isMember = membership && membership.status !== "BANNED";
+
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <p className="text-brand-muted">
-        Room <span className="text-brand-gold font-mono">{params.code}</span> — coming in Phase 2
-      </p>
+    <main className="min-h-screen px-4 py-10 max-w-3xl mx-auto space-y-6">
+      <Link href="/dashboard" className="text-sm text-brand-muted hover:text-brand-text">
+        ← Back to dashboard
+      </Link>
+
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold text-brand-gold">{room.name}</h1>
+        {room.description && <p className="text-brand-muted">{room.description}</p>}
+        <div className="text-xs text-brand-muted">
+          Code: <code className="font-mono">{room.joinCode}</code>
+          {" · "}
+          {room.isPrivate ? "Private" : "Public"}
+          {" · "}
+          Status: {room.status}
+          {" · "}
+          {room._count.members}/{room.capacity} active
+        </div>
+      </header>
+
+      {isMember ? (
+        <section className="card space-y-2">
+          <p className="text-sm">
+            You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
+          </p>
+          <p className="text-sm text-brand-muted">
+            Video player, chat, and reactions come in Phase 3 & 4.
+          </p>
+        </section>
+      ) : (
+        <section className="card space-y-2">
+          <p className="text-sm text-brand-muted">
+            You are not a member of this room. Use the join form on the dashboard with code{" "}
+            <code className="font-mono">{room.joinCode}</code>.
+          </p>
+        </section>
+      )}
     </main>
   );
 }
