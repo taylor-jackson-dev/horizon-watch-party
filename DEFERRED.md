@@ -31,9 +31,8 @@ Tracks known work intentionally pushed to later. Each item lists **what**, **why
 
 ## DevOps
 
-- [ ] **Push to GitHub remote** — repo is local-only after `git init`. CI workflow at `.github/workflows/ci.yml` won't fire until pushed.
-  - **Defer until:** Ready to share or want CI running.
-  - **How to revisit:** Create empty repo on GitHub → `git remote add origin <url>` → `git push -u origin main`.
+- [x] ~~**Push to GitHub remote**~~ — done 2026-05-27. Pushed to `https://github.com/g6gzyfh5b5-creator/Water-Party-Private-Repo`. Credentials stored in macOS Keychain.
+- [ ] **Verify GitHub Actions CI runs on push** — the workflow exists at `.github/workflows/ci.yml`. Confirm it ran green on the initial push by checking the Actions tab in GitHub.
 
 ---
 
