@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { QUEUE_MAX_SIZE } from "@/lib/config";
 
-type QueueItem = {
+export type QueueItem = {
   id: string;
   type: "YOUTUBE" | "UPLOAD" | "EXTERNAL";
   url: string | null;
@@ -20,26 +20,28 @@ type QueueItem = {
 
 interface QueuePanelProps {
   roomId: string;
-  initialItems: QueueItem[];
+  items: QueueItem[];
+  currentItemId: string | null;
   currentUserId: string;
   isHost: boolean;
+  onChanged: () => Promise<void> | void;
+  onSelect?: (itemId: string) => void;
 }
 
-export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: QueuePanelProps) {
-  const [items, setItems] = useState<QueueItem[]>(initialItems);
+export function QueuePanel({
+  roomId,
+  items,
+  currentItemId,
+  currentUserId,
+  isHost,
+  onChanged,
+  onSelect,
+}: QueuePanelProps) {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  async function refresh() {
-    const res = await fetch(`/api/rooms/${roomId}/queue`);
-    if (res.ok) {
-      const data = (await res.json()) as { items: QueueItem[] };
-      setItems(data.items);
-    }
-  }
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -57,7 +59,7 @@ export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: Queu
       }
       setUrl("");
       setTitle("");
-      await refresh();
+      await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -74,7 +76,7 @@ export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: Queu
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `Failed (${res.status})`);
       }
-      await refresh();
+      await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -97,7 +99,7 @@ export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: Queu
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `Failed (${res.status})`);
       }
-      await refresh();
+      await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -149,12 +151,13 @@ export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: Queu
           {items.map((item, idx) => {
             const canRemove = isHost || item.addedById === currentUserId;
             const isBusy = busyId === item.id;
+            const isCurrent = item.id === currentItemId;
             return (
               <li
                 key={item.id}
                 className={`card flex gap-3 items-center ${
                   item.hasPlayed ? "opacity-60" : ""
-                }`}
+                } ${isCurrent ? "ring-2 ring-brand-gold" : ""}`}
               >
                 <div className="text-xs text-brand-muted w-5 text-right tabular-nums">
                   {idx + 1}
@@ -177,10 +180,21 @@ export function QueuePanel({ roomId, initialItems, currentUserId, isHost }: Queu
                   {item.url && (
                     <div className="text-xs text-brand-muted truncate">{item.url}</div>
                   )}
-                  {item.hasPlayed && (
-                    <div className="text-xs text-brand-muted">Already played</div>
+                  {isCurrent && (
+                    <div className="text-xs text-brand-gold">Now playing</div>
                   )}
                 </div>
+                {isHost && onSelect && !isCurrent && (
+                  <button
+                    type="button"
+                    className="btn-ghost text-xs"
+                    onClick={() => onSelect(item.id)}
+                    disabled={isBusy}
+                    aria-label="Play"
+                  >
+                    Play
+                  </button>
+                )}
                 {isHost && (
                   <div className="flex flex-col gap-1">
                     <button

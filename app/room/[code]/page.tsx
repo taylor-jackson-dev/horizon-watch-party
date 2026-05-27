@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isHostRole, roomPublicSelect } from "@/lib/rooms";
-import { QueuePanel } from "@/components/room/QueuePanel";
+import { RoomShell } from "@/components/room/RoomShell";
 
 interface RoomPageProps {
   params: { code: string };
@@ -78,11 +78,11 @@ export default async function RoomPage({ params }: RoomPageProps) {
               You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
             </p>
             <p className="text-sm text-brand-muted">
-              Video player, chat, and reactions come in Phase 3 (next) & 4.
+              Chat and reactions come in Phase 4. Multi-viewer sync lands in 3.3b.
             </p>
           </section>
 
-          <QueuePanel
+          <RoomShell
             roomId={room.id}
             initialItems={queueItems.map((item) => ({
               ...item,
@@ -91,6 +91,8 @@ export default async function RoomPage({ params }: RoomPageProps) {
             }))}
             currentUserId={userId}
             isHost={isHost}
+            loopQueue={room.loopQueue}
+            loopSingle={room.loopSingle}
           />
         </>
       ) : (
