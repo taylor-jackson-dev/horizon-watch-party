@@ -7,12 +7,14 @@ import { RoomShell } from "@/components/room/RoomShell";
 
 interface RoomPageProps {
   params: { code: string };
+  searchParams: { asViewer?: string };
 }
 
-export default async function RoomPage({ params }: RoomPageProps) {
+export default async function RoomPage({ params, searchParams }: RoomPageProps) {
   const session = await auth();
   if (!session?.user?.id) redirect(`/signin?callbackUrl=/room/${params.code}`);
   const userId = session.user.id;
+  const forceViewer = searchParams.asViewer === "1";
 
   const room = await prisma.room.findUnique({
     where: { joinCode: params.code },
@@ -29,7 +31,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
   if (!room) notFound();
   const membership = room.members[0];
   const isMember = membership && membership.status !== "BANNED";
-  const isHost = isMember ? isHostRole(membership.role) : false;
+  const isHost = isMember && !forceViewer ? isHostRole(membership.role) : false;
 
   const queueItems = isMember
     ? await prisma.videoQueue.findMany({
@@ -76,9 +78,14 @@ export default async function RoomPage({ params }: RoomPageProps) {
           <section className="card space-y-2">
             <p className="text-sm">
               You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
+              {forceViewer && (
+                <span className="ml-2 text-xs text-brand-muted">
+                  (forced viewer mode via <code className="font-mono">?asViewer=1</code>)
+                </span>
+              )}
             </p>
             <p className="text-sm text-brand-muted">
-              Chat and reactions come in Phase 4. Multi-viewer sync lands in 3.3b.
+              Chat and reactions come in Phase 4.
             </p>
           </section>
 

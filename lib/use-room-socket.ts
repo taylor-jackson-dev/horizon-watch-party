@@ -12,15 +12,33 @@ export type SocketStatus =
   | "error"
   | "disconnected";
 
+export interface VideoSyncState {
+  itemId: string | null;
+  positionSecs: number;
+  isPlaying: boolean;
+  updatedAt: number;
+}
+
 export interface UseRoomSocketState {
   socket: Socket | null;
   status: SocketStatus;
   error: string | null;
+  /** Server-provided state at the moment of join (used by viewers to catch up). */
+  initialState: VideoSyncState | null;
+  /** Skew between client clock and server clock, ms. (clientNow - serverNow) */
+  serverTimeSkewMs: number;
 }
 
 interface TokenResponse {
   token: string;
   socketUrl: string;
+}
+
+interface JoinAck {
+  ok: boolean;
+  error?: string;
+  state?: VideoSyncState | null;
+  serverTime?: number;
 }
 
 /**
@@ -29,7 +47,8 @@ interface TokenResponse {
  * Lifecycle on mount:
  *   1. POST /api/socket/token → short-lived JWT
  *   2. Open socket connection with that token
- *   3. Emit room:join with the roomId; wait for ack
+ *   3. Emit room:join with the roomId; wait for ack (which carries any
+ *      existing playback state + the server's clock so we can compute skew)
  *   4. Set status = "connected"
  *
  * On unmount: emit room:leave (best-effort), close socket.
@@ -40,8 +59,10 @@ interface TokenResponse {
 export function useRoomSocket(roomId: string | null): UseRoomSocketState {
   const [status, setStatus] = useState<SocketStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [initialState, setInitialState] = useState<VideoSyncState | null>(null);
+  const [serverTimeSkewMs, setServerTimeSkewMs] = useState(0);
   const socketRef = useRef<Socket | null>(null);
-  const [, setVersion] = useState(0); // force re-render when socket ref changes
+  const [, setVersion] = useState(0);
 
   useEffect(() => {
     if (!roomId) return;
@@ -51,6 +72,7 @@ export function useRoomSocket(roomId: string | null): UseRoomSocketState {
     async function setup() {
       try {
         setError(null);
+        setInitialState(null);
         setStatus("minting-token");
         const res = await fetch("/api/socket/token", { method: "POST" });
         if (!res.ok) throw new Error(`Token mint failed (${res.status})`);
@@ -83,18 +105,18 @@ export function useRoomSocket(roomId: string | null): UseRoomSocketState {
         if (cancelled) return;
 
         setStatus("joining");
-        await new Promise<void>((resolve, reject) => {
-          s.emit(
-            "room:join",
-            { roomId },
-            (ack: { ok: boolean; error?: string }) => {
-              if (ack.ok) resolve();
-              else reject(new Error(ack.error ?? "room:join failed"));
-            },
-          );
+        const ack = await new Promise<JoinAck>((resolve, reject) => {
+          s.emit("room:join", { roomId }, (response: JoinAck) => {
+            if (response.ok) resolve(response);
+            else reject(new Error(response.error ?? "room:join failed"));
+          });
         });
         if (cancelled) return;
 
+        if (typeof ack.serverTime === "number") {
+          setServerTimeSkewMs(Date.now() - ack.serverTime);
+        }
+        setInitialState(ack.state ?? null);
         setStatus("connected");
 
         s.on("disconnect", () => {
@@ -125,5 +147,11 @@ export function useRoomSocket(roomId: string | null): UseRoomSocketState {
     };
   }, [roomId]);
 
-  return { socket: socketRef.current, status, error };
+  return {
+    socket: socketRef.current,
+    status,
+    error,
+    initialState,
+    serverTimeSkewMs,
+  };
 }

@@ -13,31 +13,51 @@ export interface VideoPlayerHandle {
   seekTo(seconds: number): void;
   getCurrentTime(): number;
   getDuration(): number;
+  getPlayerState(): number;
 }
 
 interface VideoPlayerProps {
   videoId: string | null;
   autoplay?: boolean;
+  /**
+   * Start the player muted. Required for the viewer because browsers block
+   * programmatic play() calls without prior user interaction; muted playback
+   * is exempt. The viewer can click the unmute icon on the player to enable
+   * audio — that user gesture also unlocks future plays for the page.
+   */
+  muted?: boolean;
   controlsDisabled?: boolean;
   onReady?: () => void;
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
+  /** Fires when the player transitions to the CUED state — i.e. a new video has loaded and is ready to play. */
+  onCued?: () => void;
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
   function VideoPlayer(
-    { videoId, autoplay = false, controlsDisabled = false, onReady, onPlay, onPause, onEnded },
+    {
+      videoId,
+      autoplay = false,
+      muted = false,
+      controlsDisabled = false,
+      onReady,
+      onPlay,
+      onPause,
+      onEnded,
+      onCued,
+    },
     ref,
   ) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const playerRef = useRef<YTPlayer | null>(null);
 
     // Keep latest handler refs without re-creating the player.
-    const handlersRef = useRef({ onReady, onPlay, onPause, onEnded });
+    const handlersRef = useRef({ onReady, onPlay, onPause, onEnded, onCued });
     useEffect(() => {
-      handlersRef.current = { onReady, onPlay, onPause, onEnded };
-    }, [onReady, onPlay, onPause, onEnded]);
+      handlersRef.current = { onReady, onPlay, onPause, onEnded, onCued };
+    }, [onReady, onPlay, onPause, onEnded, onCued]);
 
     useImperativeHandle(
       ref,
@@ -47,6 +67,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         seekTo: (s: number) => playerRef.current?.seekTo(s, true),
         getCurrentTime: () => playerRef.current?.getCurrentTime() ?? 0,
         getDuration: () => playerRef.current?.getDuration() ?? 0,
+        getPlayerState: () => playerRef.current?.getPlayerState() ?? -1,
       }),
       [],
     );
@@ -71,11 +92,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
               modestbranding: 1,
               rel: 0,
               playsinline: 1,
+              mute: muted ? 1 : 0,
               origin: window.location.origin,
             },
             events: {
               onReady: () => handlersRef.current.onReady?.(),
               onStateChange: (e) => {
+                if (typeof window !== "undefined" && window.localStorage?.getItem("wp:debug") === "1") {
+                  // eslint-disable-next-line no-console
+                  console.log("[WP][player] state", e.data);
+                }
                 switch (e.data) {
                   case YT_PLAYER_STATE.PLAYING:
                     handlersRef.current.onPlay?.();
@@ -85,6 +111,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
                     break;
                   case YT_PLAYER_STATE.ENDED:
                     handlersRef.current.onEnded?.();
+                    break;
+                  case YT_PLAYER_STATE.CUED:
+                    handlersRef.current.onCued?.();
                     break;
                   default:
                     break;
@@ -119,7 +148,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
     // Swap the loaded video when videoId changes.
     useEffect(() => {
       const p = playerRef.current;
-      if (!p || !videoId) return;
+      const dbg = typeof window !== "undefined" && window.localStorage?.getItem("wp:debug") === "1";
+      if (!p || !videoId) {
+        if (dbg) {
+          // eslint-disable-next-line no-console
+          console.log("[WP][player] videoId effect skipped", { videoId, hasPlayer: !!p });
+        }
+        return;
+      }
+      if (dbg) {
+        // eslint-disable-next-line no-console
+        console.log(`[WP][player] ${autoplay ? "loadVideoById" : "cueVideoById"}`, videoId);
+      }
       if (autoplay) p.loadVideoById(videoId);
       else p.cueVideoById(videoId);
     }, [videoId, autoplay]);

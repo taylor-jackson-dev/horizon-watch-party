@@ -20,6 +20,37 @@ interface AuthedSocket extends Socket {
   };
 }
 
+// ── Playback state cache ──────────────────────────────────────────
+// Per-room in-memory state. Source of truth for any new joiner so
+// they can catch up to wherever playback currently is. Persistence
+// of `hasPlayed`/`playedAt` lives in Postgres; this cache is for
+// "where are we right now" only.
+interface VideoState {
+  itemId: string | null;
+  positionSecs: number;
+  isPlaying: boolean;
+  updatedAt: number; // server time when this state was last received
+}
+
+const roomStates = new Map<string, VideoState>();
+
+// Cached host lookups so we don't hit the DB on every state event.
+// Expired/invalidated by `room:host-changed` (not implemented yet —
+// hostId on the Room model doesn't change in Phase 3).
+const roomHosts = new Map<string, string>();
+
+async function getRoomHost(roomId: string): Promise<string | null> {
+  const cached = roomHosts.get(roomId);
+  if (cached) return cached;
+  const row = await prisma.room.findUnique({
+    where: { id: roomId },
+    select: { hostId: true },
+  });
+  if (!row) return null;
+  roomHosts.set(roomId, row.hostId);
+  return row.hostId;
+}
+
 const app = express();
 
 app.get("/health", (_req, res) => {
@@ -36,7 +67,6 @@ const io = new IOServer(httpServer, {
 });
 
 // ── Auth middleware ───────────────────────────────────────────────
-// Every connecting client must send `auth: { token }` in the handshake.
 io.use(async (socket, next) => {
   try {
     const raw = socket.handshake.auth?.token;
@@ -62,9 +92,6 @@ io.on("connection", (socket: Socket) => {
     log(`- disconnect socket=${socket.id} user=${userId} reason=${reason}`);
   });
 
-  // Application-level liveness check. Note: we avoid "ping"/"pong" since
-  // those are reserved by Engine.io for transport-level heartbeats.
-  // Accept varargs so both emit("heartbeat", cb) and emit("heartbeat", payload, cb) work.
   socket.on("heartbeat", (...args: unknown[]) => {
     const last = args[args.length - 1];
     if (typeof last === "function") {
@@ -81,7 +108,12 @@ io.on("connection", (socket: Socket) => {
     "room:join",
     async (
       payload: { roomId?: string },
-      cb?: (response: { ok: boolean; error?: string }) => void,
+      cb?: (response: {
+        ok: boolean;
+        error?: string;
+        state?: VideoState | null;
+        serverTime?: number;
+      }) => void,
     ) => {
       const roomId = payload?.roomId;
       if (!roomId || typeof roomId !== "string") {
@@ -102,10 +134,12 @@ io.on("connection", (socket: Socket) => {
         await socket.join(channel);
         s.data.rooms.add(channel);
         log(`  join     socket=${socket.id} user=${userId} room=${roomId}`);
-        socket
-          .to(channel)
-          .emit("room:peer-joined", { userId, socketId: socket.id });
-        cb?.({ ok: true });
+        socket.to(channel).emit("room:peer-joined", { userId, socketId: socket.id });
+
+        // Hand the joiner the current playback state if any, so they
+        // can catch up immediately.
+        const state = roomStates.get(roomId) ?? null;
+        cb?.({ ok: true, state, serverTime: Date.now() });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to join";
         cb?.({ ok: false, error: message });
@@ -130,7 +164,68 @@ io.on("connection", (socket: Socket) => {
       cb?.({ ok: true });
     },
   );
+
+  // ── Video sync ──────────────────────────────────────────────────
+  // The host emits `video:state` whenever the current playback
+  // changes (play, pause, seek, item change) and every ~5s as a
+  // heartbeat. The server validates the emitter is the host, stamps
+  // the state with its own time, caches it, persists item-completion
+  // to the DB, and broadcasts to the rest of the room.
+  socket.on(
+    "video:state",
+    async (payload: {
+      roomId?: string;
+      itemId?: string | null;
+      positionSecs?: number;
+      isPlaying?: boolean;
+    }) => {
+      const roomId = payload?.roomId;
+      if (!roomId || !s.data.rooms.has(roomChannel(roomId))) {
+        // Silently drop — client emitted to a room they haven't joined.
+        return;
+      }
+
+      const hostId = await getRoomHost(roomId);
+      if (!hostId) return;
+      if (hostId !== userId) {
+        // Non-hosts cannot drive sync state.
+        return;
+      }
+
+      const positionSecs = typeof payload.positionSecs === "number" && payload.positionSecs >= 0
+        ? payload.positionSecs
+        : 0;
+      const isPlaying = !!payload.isPlaying;
+      const itemId = payload.itemId ?? null;
+
+      const prev = roomStates.get(roomId);
+      const next: VideoState = {
+        itemId,
+        positionSecs,
+        isPlaying,
+        updatedAt: Date.now(),
+      };
+      roomStates.set(roomId, next);
+
+      // If the item changed, mark the previous one played in the DB.
+      // Fire-and-forget; sync broadcast doesn't wait on the write.
+      if (prev?.itemId && prev.itemId !== itemId) {
+        void markItemPlayed(prev.itemId).catch((err) => {
+          log(`! markItemPlayed failed item=${prev.itemId} ${err instanceof Error ? err.message : err}`);
+        });
+      }
+
+      socket.to(roomChannel(roomId)).emit("video:state", next);
+    },
+  );
 });
+
+async function markItemPlayed(itemId: string): Promise<void> {
+  await prisma.videoQueue.updateMany({
+    where: { id: itemId, hasPlayed: false },
+    data: { hasPlayed: true, playedAt: new Date() },
+  });
+}
 
 function roomChannel(roomId: string): string {
   return `room:${roomId}`;
@@ -146,7 +241,6 @@ httpServer.listen(PORT, () => {
   log(`allowed origins: ${ALLOWED_ORIGINS.join(", ")}`);
 });
 
-// Graceful shutdown
 function shutdown(signal: string): void {
   log(`received ${signal}, shutting down`);
   io.close(() => {
