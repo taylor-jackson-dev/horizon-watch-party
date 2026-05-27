@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:web": "next dev",
+    "dev:socket": "dotenv -e .env.local -- tsx watch server/socket-server.ts",
+    "dev:all": "concurrently --names \"web,socket\" --prefix-colors \"cyan,magenta\" \"npm:dev:web\" \"npm:dev:socket\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -18,26 +21,33 @@
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
+    "express": "^5.2.1",
+    "jose": "^6.2.3",
     "nanoid": "^5.0.7",
     "next": "14.2.29",
     "next-auth": "^5.0.0-beta.25",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.5.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "dotenv-cli": "^11.0.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.29",
     "postcss": "^8.4.47",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.14",
+    "tsx": "^4.22.3",
     "typescript": "^5.6.3"
   }
 }
