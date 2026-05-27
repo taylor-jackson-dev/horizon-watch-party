@@ -218,6 +218,27 @@ io.on("connection", (socket: Socket) => {
       socket.to(roomChannel(roomId)).emit("video:state", next);
     },
   );
+
+  // Any room member can announce that the queue changed (add/remove/reorder
+  // via REST). We don't carry a payload — viewers re-fetch /api/rooms/[id]/queue.
+  // Without this, mutations done by the host while a viewer is connected
+  // leave the viewer's local items[] stale, and playing a freshly-added item
+  // shows "No video selected" until they refresh the page.
+  socket.on(
+    "queue:changed",
+    async (payload: { roomId?: string }) => {
+      const roomId = payload?.roomId;
+      if (!roomId || !s.data.rooms.has(roomChannel(roomId))) return;
+
+      const member = await prisma.roomMember.findUnique({
+        where: { roomId_userId: { roomId, userId } },
+        select: { status: true },
+      });
+      if (!member || member.status !== "ACTIVE") return;
+
+      socket.to(roomChannel(roomId)).emit("queue:changed");
+    },
+  );
 });
 
 async function markItemPlayed(itemId: string): Promise<void> {

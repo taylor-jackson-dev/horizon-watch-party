@@ -71,6 +71,8 @@ export function RoomShell({
     [currentItem],
   );
 
+  // Pure: just refetches the queue and reconciles local state. Used both
+  // by the local-mutation path AND by the queue:changed broadcast handler.
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/rooms/${roomId}/queue`);
     if (!res.ok) return;
@@ -81,6 +83,32 @@ export function RoomShell({
       return data.items[0]?.id ?? null;
     });
   }, [roomId]);
+
+  // Used by QueuePanel when this client successfully mutates the queue.
+  // Refreshes local data AND announces to other room members so their
+  // items[] doesn't go stale. Without the announce, a freshly-added item
+  // played by the host would render as "No video selected" on viewers
+  // until they refreshed the page.
+  const handleQueueMutation = useCallback(async () => {
+    await refresh();
+    if (socket) {
+      socket.emit("queue:changed", { roomId });
+    }
+  }, [refresh, socket, roomId]);
+
+  // Subscribe to queue:changed broadcasts from other clients. We refresh
+  // without re-emitting (otherwise we'd loop forever).
+  useEffect(() => {
+    if (!socket) return;
+    const onQueueChanged = () => {
+      dbg("queue:changed received");
+      void refresh();
+    };
+    socket.on("queue:changed", onQueueChanged);
+    return () => {
+      socket.off("queue:changed", onQueueChanged);
+    };
+  }, [socket, refresh]);
 
   // ── Host: emit state to server ──────────────────────────────────
   const emitState = useCallback(
@@ -342,7 +370,7 @@ export function RoomShell({
         currentItemId={currentItemId}
         currentUserId={currentUserId}
         isHost={isHost}
-        onChanged={refresh}
+        onChanged={handleQueueMutation}
         onSelect={handleSelect}
       />
     </div>

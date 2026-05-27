@@ -1,7 +1,7 @@
 # Phase 3 — Video Playback Sync
 
 > **Status:** Complete
-> **Commits:** `744045a` (3.1) → `cb050ae` (3.1.1) → `0931f8a` (3.2) → `ea90b90` (3.3a) → `3ed5a83` (3.3b)
+> **Commits:** `744045a` (3.1) → `cb050ae` (3.1.1) → `0931f8a` (3.2) → `ea90b90` (3.3a) → `3ed5a83` (3.3b) → 3.3c (queue-change broadcast)
 > **Dates:** 2026-05-27
 
 ## Goal
@@ -172,6 +172,21 @@ Fix: **viewer plays muted by default** (`mute: 1` in YT playerVars). Muted playb
 ### Debug instrumentation
 
 `localStorage.setItem("wp:debug", "1")` → console logs `handleSelect`, `emitState ->`, `applyRemoteState` (with stateItemId + currentItemId), player state transitions, item-change pending, and drain events. Kept in the code; cheap (string compare + localStorage read in handler hot paths only) and invaluable when sync misbehaves.
+
+---
+
+## 3.3c — Queue-change broadcast (follow-up fix)
+
+**Bug** (caught during dogfooding after 3.3b shipped): when the host added or removed queue items while a viewer was connected, the viewer's local `items[]` went stale. Playing a freshly-added item then showed "No video selected" in the viewer because `items.find(state.itemId)` returned `undefined` → `currentVideoId` was null. Refreshing the page fixed it (since the page re-fetched the queue on load).
+
+**Root cause:** queue mutations went through REST (`POST/DELETE/PATCH /api/rooms/[id]/queue/...`). The socket server knew nothing about them, so viewers were never notified. `video:state` events arrived with item IDs the viewer hadn't heard of.
+
+**Fix:** new `queue:changed` socket event. Empty payload — viewers re-fetch the queue when they see it.
+
+- **Server:** any ACTIVE room member can emit; server rebroadcasts to room channel excluding sender.
+- **Client (RoomShell):** `refresh()` stayed pure (re-fetch + reconcile current item if it got deleted). Added a `handleQueueMutation()` wrapper that runs `refresh()` and then emits `queue:changed`. `QueuePanel.onChanged` is now wired to `handleQueueMutation`. A separate `useEffect` subscribes to incoming `queue:changed` events and calls `refresh()` without re-emitting (otherwise we'd loop).
+
+Verified end-to-end with two windows: host adds → viewer's queue list updates within ~200ms; host plays the new item → viewer follows immediately, no refresh needed.
 
 ---
 
