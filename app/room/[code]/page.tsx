@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { roomPublicSelect } from "@/lib/rooms";
+import { isHostRole, roomPublicSelect } from "@/lib/rooms";
+import { QueuePanel } from "@/components/room/QueuePanel";
 
 interface RoomPageProps {
   params: { code: string };
@@ -28,6 +29,27 @@ export default async function RoomPage({ params }: RoomPageProps) {
   if (!room) notFound();
   const membership = room.members[0];
   const isMember = membership && membership.status !== "BANNED";
+  const isHost = isMember ? isHostRole(membership.role) : false;
+
+  const queueItems = isMember
+    ? await prisma.videoQueue.findMany({
+        where: { roomId: room.id },
+        orderBy: { position: "asc" },
+        select: {
+          id: true,
+          type: true,
+          url: true,
+          title: true,
+          thumbnailUrl: true,
+          durationSecs: true,
+          position: true,
+          hasPlayed: true,
+          playedAt: true,
+          createdAt: true,
+          addedById: true,
+        },
+      })
+    : [];
 
   return (
     <main className="min-h-screen px-4 py-10 max-w-3xl mx-auto space-y-6">
@@ -50,14 +72,27 @@ export default async function RoomPage({ params }: RoomPageProps) {
       </header>
 
       {isMember ? (
-        <section className="card space-y-2">
-          <p className="text-sm">
-            You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
-          </p>
-          <p className="text-sm text-brand-muted">
-            Video player, chat, and reactions come in Phase 3 & 4.
-          </p>
-        </section>
+        <>
+          <section className="card space-y-2">
+            <p className="text-sm">
+              You are <span className="text-brand-gold font-medium">{membership.role}</span> in this room.
+            </p>
+            <p className="text-sm text-brand-muted">
+              Video player, chat, and reactions come in Phase 3 (next) & 4.
+            </p>
+          </section>
+
+          <QueuePanel
+            roomId={room.id}
+            initialItems={queueItems.map((item) => ({
+              ...item,
+              playedAt: item.playedAt?.toISOString() ?? null,
+              createdAt: item.createdAt.toISOString(),
+            }))}
+            currentUserId={userId}
+            isHost={isHost}
+          />
+        </>
       ) : (
         <section className="card space-y-2">
           <p className="text-sm text-brand-muted">
