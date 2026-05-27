@@ -32,7 +32,7 @@ Tracks known work intentionally pushed to later. Each item lists **what**, **why
 ## DevOps
 
 - [x] ~~**Push to GitHub remote**~~ — done 2026-05-27. Pushed to `https://github.com/g6gzyfh5b5-creator/Water-Party-Private-Repo`. Credentials stored in macOS Keychain.
-- [ ] **Verify GitHub Actions CI runs on push** — the workflow exists at `.github/workflows/ci.yml`. Confirm it ran green on the initial push by checking the Actions tab in GitHub.
+- [x] ~~**Verify GitHub Actions CI runs on push**~~ — confirmed green on commit `744045a` (initial Phase 3.1 push).
 
 ---
 
