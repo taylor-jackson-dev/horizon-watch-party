@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────
+   Base resets & global styles
+───────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Prevent layout shift from scrollbar appearing */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-brand-bg text-brand-text antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar — dark cinema style */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-brand-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-muted;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Utility layer — reusable component classes
+───────────────────────────────────────────── */
+@layer components {
+  /* Card surface */
+  .card {
+    @apply bg-brand-surface border border-brand-border rounded-xl p-4;
+  }
+
+  /* Primary button — gold accent */
+  .btn-primary {
+    @apply bg-brand-gold text-brand-bg font-semibold px-4 py-2 rounded-lg
+           hover:bg-brand-gold-dim transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost button — outline style */
+  .btn-ghost {
+    @apply border border-brand-border text-brand-text px-4 py-2 rounded-lg
+           hover:bg-brand-elevated transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Text input */
+  .input {
+    @apply bg-brand-elevated border border-brand-border text-brand-text
+           rounded-lg px-3 py-2 w-full
+           placeholder:text-brand-muted
+           focus:outline-none focus:ring-2 focus:ring-brand-gold
+           transition-shadow duration-150;
+  }
+}

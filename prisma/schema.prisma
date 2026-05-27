@@ -1,0 +1,306 @@
+// prisma/schema.prisma
+// Watch Party — Database Schema
+// Last updated: 2026-05-26
+// DO NOT edit manually — use `npm run db:migrate` to apply changes
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Required by Supabase for migrations
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserTier {
+  FREE
+  PREMIUM
+}
+
+enum RoomStatus {
+  WAITING  // Room created, no video playing yet
+  ACTIVE   // Video is currently playing
+  PAUSED   // Video paused by host
+  ENDED    // Room session is over
+}
+
+enum RoomTheme {
+  DARK_CINEMA // Default — all tiers (dark charcoal, gold accents)
+  NEON_NIGHT  // Premium only
+  RETRO_DRIVE // Premium only
+  MINIMAL     // Premium only
+}
+
+enum RoomMemberRole {
+  HOST    // Full control: play, pause, seek, kick, manage settings
+  CO_HOST // INACTIVE IN MVP — future premium feature (see FEATURES.CO_HOST in config.ts)
+  VIEWER  // Default: watch, chat, react (within room toggle settings)
+}
+
+enum MemberStatus {
+  ACTIVE // Currently in the room
+  LEFT   // Left voluntarily
+  KICKED // Removed by host
+  BANNED // Banned from rejoining this room
+}
+
+enum MessageType {
+  TEXT     // Standard chat message
+  REACTION // Emoji sent to chat panel (distinct from video overlay reactions)
+  SYSTEM   // Server-generated: "Peak joined the room" / "Peak was kicked"
+  GIPHY    // Future: GIF messages
+}
+
+enum VideoSourceType {
+  YOUTUBE  // YouTube IFrame API — active in MVP
+  UPLOAD   // User-uploaded file — INACTIVE, feature-flagged off (see FEATURES.VIDEO_UPLOADS)
+  EXTERNAL // Reserved for future direct stream URLs
+}
+
+enum SubscriptionStatus {
+  ACTIVE     // Paid and current
+  PAST_DUE   // Payment failed — grace period active
+  CANCELED   // Subscription ended
+  TRIALING   // On a free trial (future use)
+  INCOMPLETE // Stripe payment pending confirmation
+}
+
+enum AdSlot {
+  PRE_SESSION  // Full-screen interstitial before a room session starts
+  SIDEBAR      // Banner ad in the chat panel during viewing
+  POST_SESSION // Shown after a room session ends
+}
+
+// ─────────────────────────────────────────────
+// AUTH MODELS (NextAuth)
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  displayName   String
+  avatarUrl     String?
+  bio           String?
+  tier          UserTier  @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  hostedRooms   Room[]         @relation("RoomHost")
+  memberships   RoomMember[]
+  messages      Message[]
+  reactions     Reaction[]
+  videoQueue    VideoQueue[]
+  subscription  Subscription?
+  adImpressions AdImpression[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String  // "oauth" | "email" | "credentials"
+  provider          String  // "google" | "discord" | "apple"
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────
+// CORE APP MODELS
+// ─────────────────────────────────────────────
+
+model Room {
+  id          String     @id @default(cuid())
+  joinCode    String     @unique
+  name        String
+  description String?
+  hostId      String
+  theme       RoomTheme  @default(DARK_CINEMA)
+  status      RoomStatus @default(WAITING)
+  capacity    Int        @default(10) // Free default: 10 | Premium: up to 100
+
+  // Privacy — free = public (discoverable), premium = private (password + hidden)
+  isPrivate Boolean @default(false)
+  password  String? // bcrypt-hashed — only set on Private rooms
+
+  // Communication toggles — all tiers, host-controlled
+  chatEnabled      Boolean @default(true)
+  voiceEnabled     Boolean @default(true)
+  reactionsEnabled Boolean @default(true)
+
+  // Queue settings
+  memberContributionLimit Int     @default(2)     // Max videos per member (0 = host-only)
+  loopQueue               Boolean @default(false) // Restart queue when last video ends
+  loopSingle              Boolean @default(false) // Repeat current video indefinitely
+  shuffleEnabled          Boolean @default(false) // Reshuffle queue on loop restart
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime? // Set when room ends; preserves history without hard deletion
+
+  host       User         @relation("RoomHost", fields: [hostId], references: [id])
+  members    RoomMember[]
+  messages   Message[]
+  reactions  Reaction[]
+  videoQueue VideoQueue[]
+
+  @@index([joinCode])
+  @@index([hostId])
+  @@index([status])
+  @@index([isPrivate, status]) // Powers the public room browser query
+}
+
+model RoomMember {
+  id   String @id @default(cuid())
+  roomId String
+  userId String
+  role   RoomMemberRole @default(VIEWER)
+  status MemberStatus   @default(ACTIVE)
+
+  // Per-member permissions — premium large-room controls
+  isMicMuted       Boolean @default(false) // Voice muted by host
+  isChatRestricted Boolean @default(false) // Chat disabled for this member by host
+  isViewOnly       Boolean @default(false) // Watch only — no mic, no chat
+  videoContribCount Int    @default(0)     // Tracks videos added; checked against Room.memberContributionLimit
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime? // Set on disconnect or voluntary leave
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  createdAt DateTime    @default(now())
+  deletedAt DateTime?   // Soft delete — UI renders "[deleted]", record kept for moderation
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  // Retention: nightly job purges messages where createdAt < NOW() - INTERVAL '48 hours'
+  @@index([roomId, createdAt]) // Primary query: last N messages for a room, ordered by time
+  @@index([userId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  emoji     String   // Unicode emoji e.g. "😂", "🔥", "❤️"
+  createdAt DateTime @default(now())
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+}
+
+model VideoQueue {
+  id           String          @id @default(cuid())
+  roomId       String
+  addedById    String
+  type         VideoSourceType @default(YOUTUBE)
+  url          String?         // YouTube URL (MVP) or future external stream URL
+  storagePath  String?         // Future: Supabase Storage path for user-uploaded video
+  title        String
+  thumbnailUrl String?
+  durationSecs Int?            // Fetched from YouTube Data API, cached here
+  position     Int             // Queue order (0-indexed); updated on reorder/shuffle
+  hasPlayed    Boolean         @default(false) // Marked true when playback begins
+  playedAt     DateTime?       // Timestamp when this item started playing
+  createdAt    DateTime        @default(now())
+
+  room    Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  addedBy User @relation(fields: [addedById], references: [id])
+
+  @@index([roomId, position])  // Fast queue order fetch
+  @@index([roomId, hasPlayed]) // Fast "what's next / has everyone played" queries
+}
+
+// ─────────────────────────────────────────────
+// MONETIZATION MODELS
+// ─────────────────────────────────────────────
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  tier                 UserTier           @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+model AdImpression {
+  id        String   @id @default(cuid())
+  userId    String?  // Nullable — future-proofed for guest access (post-MVP)
+  slot      AdSlot
+  adId      String   // Ad unit ID from ad network or internal direct deal reference
+  clicked   Boolean  @default(false)
+  roomId    String?  // Room context if impression occurred during a session
+  createdAt DateTime @default(now())
+
+  // onDelete: SetNull — anonymizes record if user deletes account, keeps for billing
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([slot, createdAt])
+  @@index([adId])
+}
