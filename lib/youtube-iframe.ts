@@ -41,6 +41,7 @@ interface YTPlayerOptions {
     modestbranding?: 0 | 1;
     rel?: 0 | 1;
     playsinline?: 0 | 1;
+    fs?: 0 | 1;
     mute?: 0 | 1;
     origin?: string;
   };

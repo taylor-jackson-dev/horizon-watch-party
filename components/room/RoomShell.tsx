@@ -7,6 +7,8 @@ import { YT_PLAYER_STATE } from "@/lib/youtube-iframe";
 import { VideoPlayer, type VideoPlayerHandle } from "./VideoPlayer";
 import { QueuePanel, type QueueItem } from "./QueuePanel";
 import { ChatPanel } from "./ChatPanel";
+import { ReactionOverlay } from "./ReactionOverlay";
+import { ReactionPicker } from "./ReactionPicker";
 
 interface RoomShellProps {
   roomId: string;
@@ -17,6 +19,7 @@ interface RoomShellProps {
   loopSingle: boolean;
   chatEnabled: boolean;
   isChatRestricted: boolean;
+  reactionsEnabled: boolean;
 }
 
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -50,6 +53,7 @@ export function RoomShell({
   loopSingle,
   chatEnabled,
   isChatRestricted,
+  reactionsEnabled,
 }: RoomShellProps) {
   const [items, setItems] = useState<QueueItem[]>(initialItems);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
@@ -59,6 +63,8 @@ export function RoomShell({
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const playerReadyRef = useRef(false);
   const isApplyingRemoteRef = useRef(false);
+  const playerStageRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Holds a video:state event that we couldn't apply yet — usually because
   // the player is mid-itemSwitch and the new video hasn't cued. Drained by
   // the effect that watches currentItemId below.
@@ -330,6 +336,45 @@ export function RoomShell({
     };
   }, [isHost, socket]);
 
+  // ── Fullscreen ──────────────────────────────────────────────────
+  // We fullscreen the WHOLE player stage (iframe + reaction overlay +
+  // picker), not the YouTube iframe alone — otherwise the iframe covers
+  // our overlay and reactions vanish. YouTube's own FS button is hidden
+  // via playerVars.fs=0 in VideoPlayer so users only see ours.
+  useEffect(() => {
+    const onChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element };
+      const fsEl = document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+      setIsFullscreen(fsEl === playerStageRef.current);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = playerStageRef.current;
+    if (!el) return;
+    const doc = document as Document & {
+      webkitExitFullscreen?: () => Promise<void>;
+      webkitFullscreenElement?: Element;
+    };
+    const fsEl = document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+    if (fsEl) {
+      if (document.exitFullscreen) void document.exitFullscreen();
+      else doc.webkitExitFullscreen?.();
+    } else {
+      const target = el as HTMLDivElement & {
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+      if (target.requestFullscreen) void target.requestFullscreen();
+      else target.webkitRequestFullscreen?.();
+    }
+  }, []);
+
   // Host: select a different queue item
   const handleSelect = useCallback(
     (id: string) => {
@@ -344,18 +389,63 @@ export function RoomShell({
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
       <div className="space-y-6 min-w-0">
         <section className="space-y-2">
-          <VideoPlayer
-            ref={playerRef}
-            videoId={currentVideoId}
-            autoplay={isHost}
-            muted={!isHost}
-            controlsDisabled={false}
-            onReady={handleReady}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onEnded={handleEnded}
-            onCued={handleCued}
-          />
+          <div ref={playerStageRef} className="wp-player-stage relative">
+            <VideoPlayer
+              ref={playerRef}
+              videoId={currentVideoId}
+              autoplay={isHost}
+              muted={!isHost}
+              controlsDisabled={false}
+              onReady={handleReady}
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onEnded={handleEnded}
+              onCued={handleCued}
+            />
+            <ReactionOverlay roomId={roomId} socket={socket} />
+            <ReactionPicker
+              roomId={roomId}
+              socket={socket}
+              reactionsEnabled={reactionsEnabled}
+            />
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="pointer-events-auto absolute bottom-3 right-14 w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3" />
+                </svg>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M4 9V5a2 2 0 0 1 2-2h4M20 9V5a2 2 0 0 0-2-2h-4M4 15v4a2 2 0 0 0 2 2h4M20 15v4a2 2 0 0 1-2 2h-4" />
+                </svg>
+              )}
+            </button>
+          </div>
           {currentItem && (
             <div className="text-sm">
               <span className="text-brand-muted">Now playing: </span>

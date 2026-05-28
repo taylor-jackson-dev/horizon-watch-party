@@ -4,6 +4,7 @@ import { Server as IOServer, type Socket } from "socket.io";
 import { prisma } from "@/lib/prisma";
 import { verifySocketToken, type SocketTokenClaims } from "@/lib/socket-token";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
+import { isAllowedReactionEmoji } from "@/lib/validations/reactions";
 
 const PORT = Number(process.env.SOCKET_PORT ?? 3001);
 
@@ -59,6 +60,28 @@ function checkChatRateLimit(userId: string, roomId: string): boolean {
   }
   recent.push(now);
   chatRateLimits.set(key, recent);
+  return true;
+}
+
+// ── Reaction rate limiting ────────────────────────────────────────
+// Same sliding-window shape as chat but tuned looser — reactions are
+// inherently spammy (that's the point). The DB-side
+// REACTION_RATE_LIMIT_PER_MINUTE=30 is the coarser future-Redis policy.
+const REACTION_RATE_LIMIT_COUNT = 10;
+const REACTION_RATE_LIMIT_WINDOW_MS = 5_000;
+const reactionRateLimits = new Map<string, number[]>();
+
+function checkReactionRateLimit(userId: string, roomId: string): boolean {
+  const key = `${userId}:${roomId}`;
+  const now = Date.now();
+  const cutoff = now - REACTION_RATE_LIMIT_WINDOW_MS;
+  const recent = (reactionRateLimits.get(key) ?? []).filter((t) => t > cutoff);
+  if (recent.length >= REACTION_RATE_LIMIT_COUNT) {
+    reactionRateLimits.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  reactionRateLimits.set(key, recent);
   return true;
 }
 
@@ -346,6 +369,82 @@ io.on("connection", (socket: Socket) => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Server error";
         log(`! chat:send failed user=${userId} room=${roomId} ${message}`);
+        cb?.({ ok: false, error: "Server error" });
+      }
+    },
+  );
+
+  // ── Reactions ───────────────────────────────────────────────────
+  // Ephemeral overlay reactions. The wire is similar to chat but:
+  //   - No persistence-before-broadcast: we broadcast immediately and
+  //     write to the DB fire-and-forget. The animation is the artifact;
+  //     the DB row is for future analytics / retention.
+  //   - The broadcast id is server-generated but is just an animation
+  //     key, not a canonical record id the client must reconcile.
+  socket.on(
+    "reaction:send",
+    async (
+      payload: { roomId?: string; emoji?: string },
+      cb?: (response: { ok: boolean; error?: string }) => void,
+    ) => {
+      const roomId = payload?.roomId;
+      const emoji = typeof payload?.emoji === "string" ? payload.emoji : "";
+
+      if (!roomId || typeof roomId !== "string") {
+        return cb?.({ ok: false, error: "roomId is required" });
+      }
+      if (!isAllowedReactionEmoji(emoji)) {
+        return cb?.({ ok: false, error: "Emoji not allowed" });
+      }
+      if (!s.data.rooms.has(roomChannel(roomId))) {
+        return cb?.({ ok: false, error: "Not joined to this room" });
+      }
+      if (!checkReactionRateLimit(userId, roomId)) {
+        return cb?.({ ok: false, error: "slow_down" });
+      }
+
+      try {
+        const member = await prisma.roomMember.findUnique({
+          where: { roomId_userId: { roomId, userId } },
+          select: {
+            status: true,
+            user: { select: { displayName: true } },
+            room: { select: { reactionsEnabled: true } },
+          },
+        });
+        if (!member || member.status !== "ACTIVE") {
+          return cb?.({ ok: false, error: "Not an active member" });
+        }
+        if (!member.room.reactionsEnabled) {
+          return cb?.({ ok: false, error: "Reactions are disabled in this room" });
+        }
+
+        const createdAt = new Date();
+        const id = `${createdAt.getTime()}-${Math.random().toString(36).slice(2, 10)}`;
+
+        io.to(roomChannel(roomId)).emit("reaction:burst", {
+          id,
+          roomId,
+          userId,
+          userDisplayName: member.user.displayName,
+          emoji,
+          createdAt: createdAt.toISOString(),
+        });
+        cb?.({ ok: true });
+
+        // Persist in the background; broadcast does not wait on the write.
+        void prisma.reaction
+          .create({ data: { roomId, userId, emoji, createdAt } })
+          .catch((err) => {
+            log(
+              `! reaction persist failed user=${userId} room=${roomId} ${
+                err instanceof Error ? err.message : err
+              }`,
+            );
+          });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Server error";
+        log(`! reaction:send failed user=${userId} room=${roomId} ${message}`);
         cb?.({ ok: false, error: "Server error" });
       }
     },

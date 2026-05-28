@@ -99,6 +99,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
           loopSingle={room.loopSingle}
           chatEnabled={room.chatEnabled}
           isChatRestricted={isChatRestricted}
+          reactionsEnabled={room.reactionsEnabled}
         />
       ) : (
         <section className="card space-y-2">

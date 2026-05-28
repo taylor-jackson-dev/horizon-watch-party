@@ -92,6 +92,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
               modestbranding: 1,
               rel: 0,
               playsinline: 1,
+              // Hide YouTube's native fullscreen button — the room shell
+              // provides its own that fullscreens the whole player stage
+              // (iframe + reaction overlay + picker) instead of just the
+              // iframe alone. Without this, native FS hides our overlay
+              // behind the iframe.
+              fs: 0,
               mute: muted ? 1 : 0,
               origin: window.location.origin,
             },
@@ -165,7 +171,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
     }, [videoId, autoplay]);
 
     return (
-      <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+      <div className="wp-player-frame aspect-video w-full overflow-hidden rounded-xl bg-black">
         {videoId ? (
           <div ref={containerRef} className="w-full h-full" />
         ) : (
