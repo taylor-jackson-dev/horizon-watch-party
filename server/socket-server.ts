@@ -265,6 +265,23 @@ io.on("connection", (socket: Socket) => {
     },
   );
 
+  // Viewer-initiated re-sync. When a viewer manually pauses then plays
+  // (or vice versa), their local position diverges from the host. The
+  // host's heartbeat would eventually correct them (~10s), but that's a
+  // long beat of drift. This event lets viewers pull the authoritative
+  // cached state on demand — same `video:state` shape the joiner gets,
+  // emitted to just the requesting socket.
+  socket.on(
+    "video:request-sync",
+    (payload: { roomId?: string }) => {
+      const roomId = payload?.roomId;
+      if (!roomId || !s.data.rooms.has(roomChannel(roomId))) return;
+      const state = roomStates.get(roomId);
+      if (!state) return;
+      socket.emit("video:state", state);
+    },
+  );
+
   // Any room member can announce that the queue changed (add/remove/reorder
   // via REST). We don't carry a payload — viewers re-fetch /api/rooms/[id]/queue.
   // Without this, mutations done by the host while a viewer is connected

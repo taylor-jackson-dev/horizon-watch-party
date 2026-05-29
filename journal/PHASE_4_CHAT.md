@@ -325,3 +325,11 @@ Before `room.connect()`, we do a throwaway `navigator.mediaDevices.getUserMedia(
 - **"could not establish signal connection: invalid API key" on first Join voice attempt.** Root cause: `.env.local` still contained the `.env.example` placeholder values (`LIVEKIT_URL="wss://your-project.livekit.cloud"` etc.) — the file had never been edited since project init. Diagnosed without exposing secrets by reading just the value lengths and prefixes from the file. Resolved by populating `.env.local` with real Cloud project credentials and restarting `npm run dev:web` (env is only read at process start).
 - **Secret leaked through chat.** During setup the user pasted live API credentials directly into the conversation. Flagged immediately, recommended rotation. Going forward: shape-probe (length + prefix) is sufficient to verify env vars are populated correctly without ever needing the value in chat.
 - **macOS Finder hides `.env.local`.** Files starting with `.` are hidden by default; ⌘⇧. toggles visibility. Documenting this pattern because it'll bite the same way when adding new env vars.
+
+---
+
+## Phase 4.4 polish backlog
+
+Found during the 2026-05-29 pre-friends-test readiness pass. Not show-stoppers; defer to Phase 4.4 cleanup:
+
+- **Active-member count is membership-based, not presence-based.** `room._count.members where status === "ACTIVE"` reflects the `RoomMember` row, which stays ACTIVE after a user closes the tab / navigates away. The displayed count goes stale until someone explicitly leaves (the `/api/rooms/[id]/leave` endpoint exists but the `← Back to dashboard` link doesn't call it). Fix shape: socket-driven presence (server tracks currently-connected userIds per room, emits a `room:presence` event; client renders that instead of the SSR count). Membership rows stay for history; presence is the live count.

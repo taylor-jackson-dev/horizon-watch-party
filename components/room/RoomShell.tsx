@@ -190,14 +190,31 @@ export function RoomShell({
   const handlePlay = useCallback(() => {
     if (isApplyingRemoteRef.current) return;
     setIsPlaying(true);
-    if (isHost) emitState({ isPlaying: true });
-  }, [isHost, emitState]);
+    if (isHost) {
+      emitState({ isPlaying: true });
+    } else if (socket) {
+      // Viewer-initiated play (e.g. they paused earlier and hit resume,
+      // or used the YT controls to seek). Their local position has likely
+      // diverged from the host — pull the authoritative state immediately
+      // instead of waiting for the next host heartbeat (~10s).
+      dbg("viewer play → request-sync");
+      socket.emit("video:request-sync", { roomId });
+    }
+  }, [isHost, emitState, socket, roomId]);
 
   const handlePause = useCallback(() => {
     if (isApplyingRemoteRef.current) return;
     setIsPlaying(false);
-    if (isHost) emitState({ isPlaying: false });
-  }, [isHost, emitState]);
+    if (isHost) {
+      emitState({ isPlaying: false });
+    } else if (socket) {
+      // Same logic as handlePlay — re-sync to host on any viewer-driven
+      // state change. If the host is actually playing, the response will
+      // snap the viewer back into play; if the host is also paused, no-op.
+      dbg("viewer pause → request-sync");
+      socket.emit("video:request-sync", { roomId });
+    }
+  }, [isHost, emitState, socket, roomId]);
 
   const handleEnded = useCallback(() => {
     if (isApplyingRemoteRef.current) return;
