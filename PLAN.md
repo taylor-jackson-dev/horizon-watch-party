@@ -238,42 +238,59 @@ watch-party/
 
 ## 10. Build Phases
 
-### Phase 1 — Foundation
-- [ ] Next.js 14 project scaffold with TypeScript + Tailwind
-- [ ] Prisma schema + initial migration (Supabase)
-- [ ] NextAuth.js: Google OAuth + email/password
-- [ ] User model, profile API endpoint
-- [ ] `.env.example` with all required variables documented
-- [ ] GitHub Actions: lint + typecheck CI
+### Phase 1 — Foundation ✅
+- [x] Next.js 14 project scaffold with TypeScript + Tailwind
+- [x] Prisma schema + initial migration (Supabase)
+- [x] NextAuth.js: Google OAuth + email/password
+- [x] User model, profile API endpoint
+- [x] `.env.example` with all required variables documented
+- [x] GitHub Actions: lint + typecheck CI
 
-### Phase 2 — Room System
-- [ ] Room creation with `nanoid` join codes
-- [ ] Room join flow (code-based entry)
-- [ ] Host vs. viewer role enforcement
-- [ ] Room settings API (name, theme, capacity)
-- [ ] Free tier capacity gate (max 10 viewers)
-- [ ] RoomMember join/leave tracking
+### Phase 2 — Room System ✅
+- [x] Room creation with `nanoid` join codes
+- [x] Room join flow (code-based entry)
+- [x] Host vs. viewer role enforcement
+- [x] Room settings API (name, theme, capacity)
+- [x] Free tier capacity gate (max 10 viewers)
+- [x] RoomMember join/leave tracking
 
-### Phase 3 — Video Playback Sync
-- [ ] YouTube embed via IFrame API
-- [ ] Socket.io sync engine: play / pause / seek / heartbeat
-- [ ] Latency compensation logic
-- [ ] Host-only playback controls
-- [ ] Video queue management (add, reorder, remove)
-- [ ] Stub for future upload support (feature-flagged, UI hidden)
+### Phase 3 — Video Playback Sync ✅
+- [x] YouTube embed via IFrame API
+- [x] Socket.io sync engine: play / pause / seek / heartbeat
+- [x] Latency compensation logic
+- [x] Host-only playback controls
+- [x] Video queue management (add, reorder, remove)
+- [x] Stub for future upload support (feature-flagged, UI hidden)
 
 ### Phase 4 — Social & Communication
-- [ ] Real-time text chat (Socket.io room channel)
-- [ ] Animated emoji reactions (overlay + chat)
-- [ ] LiveKit voice chat (push-to-talk + open mic)
-- [ ] User avatars + basic profile customization
+- [x] **4.1** Real-time text chat (Socket.io room channel)
+- [x] **4.2** Animated emoji reactions (overlay + chat)
+- [x] **4.3** LiveKit voice chat (push-to-talk + open mic)
+- [ ] **4.4** User avatars + basic profile customization
+
+**4.4 Candidates (proposed — discuss + approve/cut at phase start)**
+- *Avatar upload to Supabase Storage* — already-provisioned bucket, simple file picker + client-side crop. Replaces OAuth-derived `avatarUrl`.
+- *Display-name edit* — currently locked to OAuth provider name. Field exists; just needs a settings UI.
+- *Status messages under name* — short text like "🍕 grabbing pizza" shown in voice/chat lists. Tiny socialness, almost free.
+- *Lurker mode UI* — surface the existing `isViewOnly` schema flag so shy friends can opt in. Free; schema is already there.
+- *Avatar reactions* — your avatar bubbles a small emoji next to it when you react, in addition to the overlay float. Less chat spam, more presence.
+- *Per-participant local volume slider* — voice polish. "Sarah's mic is hot" universal fix. LiveKit supports it.
+- *"Step away" mode* — viewer flags AFK; video keeps playing for them but their re-sync is relaxed. Distinct from leaving.
+- *Presence-based active count* — replace SSR `members where status=ACTIVE` count with socket-driven presence so the displayed count reflects who's actually connected. (Carried from Phase 4.3 readiness pass.)
 
 ### Phase 5 — View Modes & UI Polish
 - [ ] Theater mode (avatar rail below screen)
-- [ ] Full-screen mode
+- [ ] Full-screen mode (basic exists from 4.2 — extend to theater + chat overlay)
 - [ ] Split view (video + chat/social panel)
 - [ ] Mobile-responsive / PWA manifest + service worker
 - [ ] Dark cinema theme design system
+
+**5.x Candidates (proposed — discuss + approve/cut at phase start)**
+- *Spotlight reactions* — when 3+ people send the same emoji within ~2s, a big animated overlay plays across the screen. Detects a "shared moment." Builds on 4.2 reactions infra; small server-side detector + a CSS keyframe.
+- *Live polls* — host (or any member, configurable) posts a 2-option quick poll. Results pop up over the player, voters animate in. Great for "skip intro?" or "what next?"
+- *Catch-up summary for latecomers* — when a viewer joins mid-session: small modal with "playback at 14:32 · host queued 3 videos · 2 reactions in last minute · chat highlight: …" Helps them slot in without pestering.
+- *Layout overhaul* — the broader style + layout redesign discussed; lives naturally inside the Dark cinema design system work.
+- *Theme variants* — bring `RoomTheme` enum (already in schema) to life with distinct cosmetic skins beyond DARK_CINEMA.
 
 ### Phase 6 — Monetization
 - [ ] Stripe subscription integration (free/premium tiers)
@@ -283,6 +300,14 @@ watch-party/
 - [ ] Premium feature gates (room capacity, no ads, exclusive customization)
 - [ ] Billing portal (Stripe Customer Portal)
 
+**6.x Premium feature candidates (proposed — discuss + approve/cut at phase start)**
+- *Custom emoji sets* — upload your own emojis per-user or per-room. Builds on 4.2 reactions infra. Natural premium hook.
+- *Voice soundboard* — pre-recorded short clips you can play into voice (Discord-style). Fun, monetizable, easy to ship with rate-limit guardrails.
+- *AI session recaps* — auto-generated narrative recap of the session ("the room collectively gasped at the third act twist…"). Whisper for voice transcription + Claude for narrative.
+- *Themed room skins* — Halloween, sci-fi, indie cinema. Pure cosmetic, big-feeling differentiator.
+- *Custom join codes* — branded codes like `MOVIE-NIGHT` instead of `xK9mP2qR`. Vanity feature.
+- *Persistent rooms* — premium rooms don't auto-close on inactivity.
+
 ### Phase 7 — Cross-Platform & Extension
 - [ ] Tauri desktop app (wraps web app)
 - [ ] Expo React Native app (iOS + Android)
@@ -291,8 +316,25 @@ watch-party/
 ### Phase 8 — Moderation & Safety
 - [ ] Host controls: mute, kick, ban
 - [ ] Report system
-- [ ] Rate limiting on chat
+- [ ] Rate limiting on chat (in-memory limiter ships with each feature; this graduates to Redis-backed)
 - [ ] Age-appropriate content defaults
+
+**8.x Candidates (proposed — discuss + approve/cut at phase start)**
+- *Host force-mute via LiveKit Admin API* — schema flag `isMicMuted` is already token-respected; this adds the host UI + server-side `RoomService.muteParticipant` call. (Carried from Phase 4.3 deferred list.)
+- *Chat moderation UI* — delete-own-message, host delete-any. Schema already has `deletedAt`.
+- *Audit log* — record host moderation actions (mute, kick, ban, message delete) for accountability.
+
+---
+
+### Phase 9 — Memory & Coordination *(new — proposed)*
+
+Bridges between sessions and friend groups. Turns Watch Party from a utility into something users come back to. Sequenced after monetization so we have premium hooks to attach.
+
+- [ ] *Friends-watched-together history* — dashboard surfaces "You've watched 7 things with Sarah, last together May 14." Network effect on relationships, not just rooms.
+- [ ] *Recurring watch parties / templates* — "Friday Movie Night" template: saved member list, theme, recurring schedule, auto-opens. Solves the "when's everyone free?" coordination friction.
+- [ ] *Schedule + RSVP* — invite friends to a future-time room. Calendar invite or push notification. Live RSVP counter.
+- [ ] *Watchlists* — saved video lists portable between rooms; share lists between friends.
+- [ ] *Session recap (basic, free tier)* — top reactions, peak chat moments, total runtime; shareable card. (Distinct from premium AI-narrative version in Phase 6.)
 
 ---
 
@@ -319,15 +361,35 @@ watch-party/
 
 ---
 
-## Next Step → Phase 1: Foundation
+## Backlog — Wild cards, no fixed phase
 
-All planning and schema decisions are locked. See `DATABASE_SCHEMA.md` for the full approved Prisma schema.
+Captured here so they don't get lost. Surface when relevant or when a related phase opens up.
 
-Phase 1 tasks:
-1. Scaffold Next.js 14 project with TypeScript + Tailwind
-2. Create `lib/config.ts` with all queue/room constants
-3. Wire in Prisma with approved schema against Supabase
-4. Set up NextAuth.js (Google OAuth + email/password)
-5. Establish full folder structure
-6. Create `.env.example` with all required variables
-7. Set up GitHub Actions CI (lint + typecheck)
+- *Live captions / transcription* — Whisper-style speech-to-text on the voice stream. Accessibility win + lets late-joiners "read" what was said. Infra-heavy (streaming Whisper or LiveKit Egress + transcription).
+- *Watch-along trivia* — auto-pulled IMDB/YouTube metadata surfaces between videos ("Did you know this scene took 47 takes?"). Charming, needs a metadata pipeline.
+- *AR/VR cinema room* — Quest support, avatar-seat layout. Far-future flag.
+- *Local volume mixer overlay* — extends per-participant volume into a small mixer panel.
+- *Voice effects* — robot voice, pitch shift, etc. for the soundboard. Fun, possibly cursed.
+- *Webcam reactions* — tiny self-view bubble. Privacy minefield; design carefully if pursued.
+
+---
+
+## Next Step → Phase 4.4: Avatars + Profile Customization
+
+Phases 1–3 + 4.1–4.3 are shipped. Next active phase is 4.4 — graduating identity from "whatever OAuth gave us" to user-owned. Candidates (above) to be reviewed and approved/cut before scoping.
+
+### Already-shipped highlights (1–4.3)
+- Foundation, room system, video sync engine
+- Real-time chat (4.1) — persistent, rate-limited, server-authoritative
+- Animated emoji reactions (4.2) — Twitch-style overlay with full-screen support
+- LiveKit voice chat (4.3) — opt-in join, default PTT on `V`, host-level toggle
+- Strict viewer re-sync (4.3.1) — viewer-driven play/pause snaps to host position
+
+### Original Phase 1 task list *(historical, kept for reference)*
+1. Scaffold Next.js 14 project with TypeScript + Tailwind ✅
+2. Create `lib/config.ts` with all queue/room constants ✅
+3. Wire in Prisma with approved schema against Supabase ✅
+4. Set up NextAuth.js (Google OAuth + email/password) ✅
+5. Establish full folder structure ✅
+6. Create `.env.example` with all required variables ✅
+7. Set up GitHub Actions CI (lint + typecheck) ✅
