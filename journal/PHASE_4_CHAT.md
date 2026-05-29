@@ -1,6 +1,6 @@
 # Phase 4 — Social & Communication
 
-> **Status:** 4.1 (chat) + 4.2 (reactions) complete; 4.3 (voice), 4.4 (avatars) deferred
+> **Status:** 4.1 (chat) + 4.2 (reactions) + 4.3 (voice) complete; 4.4 (avatars) deferred
 > **Dates:** 2026-05-27 → 2026-05-28
 
 ## Goal
@@ -216,3 +216,112 @@ Fix:
 - `npm run typecheck` — clean
 - Two-window manual test (host + `?asViewer=1`): emoji sent from one window floats up on both; sender sees their own. Picker outside-click closes. Spam-clicking past 10 in 5s triggers "Slow down" toast. Fullscreen button enters/exits stage fullscreen; reactions render correctly in both modes.
 - `room.reactionsEnabled = false` (via Prisma Studio) → picker button disables with "Reactions disabled by host" title; server rejects bypass attempts.
+
+---
+
+## 4.3 — LiveKit voice chat
+
+Opt-in WebRTC voice via LiveKit Cloud, scoped one LiveKit room per Watch Party room. Server-issued short-lived tokens; client connects only when the user clicks Join voice. Push-to-talk is the default mode (no surprise hot-mic on first connect), with an Open mic toggle for live groups.
+
+### Wire contract
+
+**Token issuance — `POST /api/livekit/token`**
+
+```ts
+// Request
+{ roomId: string }
+
+// Response (200)
+{
+  token: string;      // JWT (TTL = LIVEKIT_TOKEN_TTL_SECONDS = 3600)
+  url: string;        // LIVEKIT_URL — returned per-request so no NEXT_PUBLIC_ var
+  identity: string;   // == userId
+  roomName: string;   // "wp_<roomId>"
+}
+```
+
+Returned in-band so the LiveKit URL never enters the client bundle.
+
+**Server gates (in order)**
+
+1. NextAuth session (`requireUser`)
+2. `roomMember.status === "ACTIVE"` (also rejects BANNED with `403`)
+3. `!isViewOnly` — view-only members get no token at all
+4. `room.voiceEnabled` — host-level feature gate
+5. Token built with `canPublish = !isMicMuted` — muted members get a subscribe-only token, the server is the enforcer
+
+### Architecture — intent vs effect
+
+The hook (`lib/use-voice-room.ts`) wraps `livekit-client`'s `Room` and exposes user *intent* (mode + open-mic toggle + PTT held state); a single `useEffect` reconciles that to LiveKit's publish state via `localParticipant.setMicrophoneEnabled()`. Effect runs only while `status === "connected"`, so we never try to enable the mic while disconnected.
+
+```
+effectiveMicEnabled =
+  status === "connected" &&
+  (mode === "ptt" ? pttActive : openMicEnabled)
+```
+
+This collapses three independent inputs (mode, open toggle, PTT key/button) into one truth, and pushing it through a single effect means no race between mode flips and key events.
+
+### PTT mechanics
+
+- Default key: **V** (avoids YouTube's spacebar play/pause conflict)
+- Listener registers at the window level **only** when `mode === "ptt"` and `status === "connected"` — automatically cleaned up on mode/status changes
+- `isEditableTarget` guard blocks PTT from firing while focus is in `<input>`, `<textarea>`, or contenteditable (so typing a `V` in chat doesn't transmit voice)
+- `window.blur` listener safety-releases — if user alt-tabs while holding V, mic doesn't hang open
+- `e.repeat` filter on keydown prevents the OS auto-repeat from spamming state
+- Click-and-hold on-screen button mirrors the key: `pressPtt`/`releasePtt` handlers on `pointerdown`/`pointerup`/`pointerleave`/`pointercancel` so a drag-off-button also releases cleanly
+
+### Remote audio sink
+
+A single hidden `<div id="wp-voice-audio-sink">` is appended to `<body>` once per hook lifetime. Remote `RemoteAudioTrack`s are `attach()`ed (creating `<audio>` elements) and appended to the sink; `detach()` on `TrackUnsubscribed`/`Disconnected` prevents zombie elements from accumulating across reconnects.
+
+### Mic permission pre-prompt
+
+Before `room.connect()`, we do a throwaway `navigator.mediaDevices.getUserMedia({ audio: true })` and immediately stop the track. The browser permission prompt appears at the *moment the user clicks "Join voice"* — not later when they first press PTT. Failure is non-fatal: a denial means publish will silently fail later, but subscribe still works (you can listen even if you can't speak).
+
+### Decisions locked
+
+- **One LiveKit room per Watch Party room, namespaced "wp_<roomId>".** Avoids collisions if we ever share a LiveKit project across environments.
+- **No NEXT_PUBLIC_LIVEKIT_URL.** URL ships in the token response. One less client env var, one less leak vector.
+- **Default mode = PTT.** Safer first-time UX. Open mic is one click away.
+- **Default PTT key = `V`.** Discord convention; no spacebar collision. No settings UI in MVP — change later.
+- **Opt-in join.** Users click Join voice; we don't auto-connect on room entry. Avoids surprise permission prompts and bandwidth.
+- **`canPublish` baked into the token, not enforced client-side.** A user can't grant themselves publish rights by tampering with the UI — the server is the only authority.
+- **Roll-your-own thin layer over `livekit-client`.** Skipped `@livekit/components-react`; tighter integration with the existing dark cinema theme and ~150kB lighter.
+- **Voice panel goes above chat in the sidebar.** Same column as chat for desktop; stacks naturally on mobile.
+
+### Files
+
+| File | Role |
+|---|---|
+| `lib/livekit.ts` | **new** — server-only `createVoiceToken` + `liveKitRoomName` (`wp_<roomId>`). `"server-only"` import enforces the boundary at build time. |
+| `lib/validations/voice.ts` | **new** — `voiceTokenRequestSchema` (zod) |
+| `app/api/livekit/token/route.ts` | **new** — POST endpoint, all 5 gates above |
+| `lib/use-voice-room.ts` | **new** — React hook wrapping `Room` lifecycle. Intent → effect reconciliation; PTT key listener; remote audio attachment; cleanup on unmount |
+| `components/room/VoicePanel.tsx` | **new** — Mode toggle, Join/Leave, Hold-to-talk button or Mic toggle, participant list with speaking ring; disabled shells for `!voiceEnabled` and `isViewOnly` |
+| `components/room/RoomShell.tsx` | Mounts `VoicePanel` above `ChatPanel` in the sidebar; aside became a flex column to accommodate both |
+| `app/room/[code]/page.tsx` | Selects `isMicMuted` + `isViewOnly` in the membership query; threads `voiceEnabled`, `isMicMuted`, `isViewOnly` to `RoomShell` |
+| `package.json` | Added `livekit-server-sdk@2.15` + `livekit-client@2.19` |
+
+### Deferred
+
+- **Host force-mute / kick from voice** — requires LiveKit Admin API calls (RoomService). Schema flag (`isMicMuted`) is honored on token issuance, but there's no UI yet to flip it for someone else. Likely lands with the broader moderation UI (Phase 8).
+- **Audio device picker** — no UI to choose mic/speaker yet. Browser default is used.
+- **Volume sliders per participant** — out of scope.
+- **Noise suppression / echo cancellation toggle** — LiveKit/Chrome defaults are on; no UI to flip.
+- **PTT key rebind UI** — hardcoded V. Lives in `PTT_KEY` constant for now.
+- **E2EE (DAVE-style)** — explicitly discussed and deferred. LiveKit's opt-in E2EE remains a future path if the threat model ever calls for it; PLAN's target audience (small-group viewing parties) doesn't warrant the build cost.
+
+### Verification
+
+- `npm run lint` — clean
+- `npm run typecheck` — clean
+- Solo connect: Join voice → mic permission prompt → "Connected · 1 in voice". Mode toggle works. Leave disconnects cleanly. No console errors.
+- Negative gates spot-checked: `LIVEKIT_API_KEY=your-livekit-api-key` (placeholder) → "invalid API key" surfaces in the panel correctly (caught during setup; see Problems below)
+- **Two-party ear test deferred to a real session with multiple users** — scheduled for the next session (2026-05-29) with the user's friends. All wire-level signals (connection, participant list updates, speaking-ring state) work; only the actual audio path is unverified.
+
+### Problems hit + resolutions
+
+- **"could not establish signal connection: invalid API key" on first Join voice attempt.** Root cause: `.env.local` still contained the `.env.example` placeholder values (`LIVEKIT_URL="wss://your-project.livekit.cloud"` etc.) — the file had never been edited since project init. Diagnosed without exposing secrets by reading just the value lengths and prefixes from the file. Resolved by populating `.env.local` with real Cloud project credentials and restarting `npm run dev:web` (env is only read at process start).
+- **Secret leaked through chat.** During setup the user pasted live API credentials directly into the conversation. Flagged immediately, recommended rotation. Going forward: shape-probe (length + prefix) is sufficient to verify env vars are populated correctly without ever needing the value in chat.
+- **macOS Finder hides `.env.local`.** Files starting with `.` are hidden by default; ⌘⇧. toggles visibility. Documenting this pattern because it'll bite the same way when adding new env vars.

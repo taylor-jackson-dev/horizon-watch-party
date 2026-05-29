@@ -22,7 +22,13 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
       ...roomPublicSelect,
       members: {
         where: { userId },
-        select: { role: true, status: true, isChatRestricted: true },
+        select: {
+          role: true,
+          status: true,
+          isChatRestricted: true,
+          isMicMuted: true,
+          isViewOnly: true,
+        },
       },
       _count: { select: { members: { where: { status: "ACTIVE" } } } },
     },
@@ -33,6 +39,8 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
   const isMember = membership && membership.status !== "BANNED";
   const isHost = isMember && !forceViewer ? isHostRole(membership.role) : false;
   const isChatRestricted = membership?.isChatRestricted ?? false;
+  const isMicMuted = membership?.isMicMuted ?? false;
+  const isViewOnly = membership?.isViewOnly ?? false;
 
   const queueItems = isMember
     ? await prisma.videoQueue.findMany({
@@ -100,6 +108,9 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
           chatEnabled={room.chatEnabled}
           isChatRestricted={isChatRestricted}
           reactionsEnabled={room.reactionsEnabled}
+          voiceEnabled={room.voiceEnabled}
+          isMicMuted={isMicMuted}
+          isViewOnly={isViewOnly}
         />
       ) : (
         <section className="card space-y-2">

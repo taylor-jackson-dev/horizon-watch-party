@@ -9,6 +9,7 @@ import { QueuePanel, type QueueItem } from "./QueuePanel";
 import { ChatPanel } from "./ChatPanel";
 import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
+import { VoicePanel } from "./VoicePanel";
 
 interface RoomShellProps {
   roomId: string;
@@ -20,6 +21,9 @@ interface RoomShellProps {
   chatEnabled: boolean;
   isChatRestricted: boolean;
   reactionsEnabled: boolean;
+  voiceEnabled: boolean;
+  isMicMuted: boolean;
+  isViewOnly: boolean;
 }
 
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -54,6 +58,9 @@ export function RoomShell({
   chatEnabled,
   isChatRestricted,
   reactionsEnabled,
+  voiceEnabled,
+  isMicMuted,
+  isViewOnly,
 }: RoomShellProps) {
   const [items, setItems] = useState<QueueItem[]>(initialItems);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
@@ -471,14 +478,22 @@ export function RoomShell({
         />
       </div>
 
-      <aside className="h-[500px] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-4">
-        <ChatPanel
+      <aside className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-4 flex flex-col gap-3 min-h-0">
+        <VoicePanel
           roomId={roomId}
-          socket={socket}
-          currentUserId={currentUserId}
-          chatEnabled={chatEnabled}
-          isChatRestricted={isChatRestricted}
+          voiceEnabled={voiceEnabled}
+          isMicMuted={isMicMuted}
+          isViewOnly={isViewOnly}
         />
+        <div className="flex-1 min-h-0 h-[500px] lg:h-auto">
+          <ChatPanel
+            roomId={roomId}
+            socket={socket}
+            currentUserId={currentUserId}
+            chatEnabled={chatEnabled}
+            isChatRestricted={isChatRestricted}
+          />
+        </div>
       </aside>
     </div>
   );

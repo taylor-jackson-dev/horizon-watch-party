@@ -23,6 +23,8 @@
     "clsx": "^2.1.1",
     "express": "^5.2.1",
     "jose": "^6.2.3",
+    "livekit-client": "^2.19.0",
+    "livekit-server-sdk": "^2.15.4",
     "nanoid": "^5.0.7",
     "next": "14.2.29",
     "next-auth": "^5.0.0-beta.25",
