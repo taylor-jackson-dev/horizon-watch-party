@@ -9,12 +9,14 @@
     "dev:all": "concurrently --names \"web,socket\" --prefix-colors \"cyan,magenta\" \"npm:dev:web\" \"npm:dev:socket\"",
     "build": "next build",
     "start": "next start",
+    "start:socket": "tsx server/socket-server.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:push": "dotenv -e .env.local -- prisma db push",
-    "db:studio": "dotenv -e .env.local -- prisma studio"
+    "db:studio": "dotenv -e .env.local -- prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
@@ -33,6 +35,7 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.5.4",
+    "tsx": "^4.22.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -49,7 +52,6 @@
     "postcss": "^8.4.47",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.14",
-    "tsx": "^4.22.3",
     "typescript": "^5.6.3"
   }
 }

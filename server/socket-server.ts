@@ -6,7 +6,9 @@ import { verifySocketToken, type SocketTokenClaims } from "@/lib/socket-token";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
 import { isAllowedReactionEmoji } from "@/lib/validations/reactions";
 
-const PORT = Number(process.env.SOCKET_PORT ?? 3001);
+// Railway (and most PaaS hosts) inject the listen port as PORT; SOCKET_PORT is
+// the local-dev override, 3001 the final fallback.
+const PORT = Number(process.env.PORT ?? process.env.SOCKET_PORT ?? 3001);
 
 // Allowed origins for CORS. In dev we accept localhost; in production
 // this would be the deployed web app origin.
@@ -485,7 +487,7 @@ function log(line: string): void {
 }
 
 httpServer.listen(PORT, () => {
-  log(`listening on http://localhost:${PORT}`);
+  log(`listening on port ${PORT}`);
   log(`allowed origins: ${ALLOWED_ORIGINS.join(", ")}`);
 });
 

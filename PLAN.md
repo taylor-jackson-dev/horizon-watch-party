@@ -338,6 +338,66 @@ Bridges between sessions and friend groups. Turns Watch Party from a utility int
 
 ---
 
+## Deployment — Production Setup & Checklist
+
+> **Status:** In progress — first public deploy for remote friend testing (2026-06-10).
+> **Topology:** Web + API → **Vercel** (serverless) · Socket.io → **Railway** (persistent Node) · Postgres → **Supabase** (reused dev project) · Voice → **LiveKit Cloud**.
+
+### Why two hosts
+`server/socket-server.ts` is a long-lived process and the client connects
+WebSocket-only (no polling fallback). Vercel's serverless model can't hold an open
+socket, so the socket server deploys separately to Railway. Vercel hosts the
+Next.js web app + API routes.
+
+### Repo prep (committed — no console needed)
+- `start:socket` = `tsx server/socket-server.ts` (prod, no watch); `tsx` promoted to
+  `dependencies` so it survives a production install.
+- Socket server binds Railway's injected `PORT` (falls back to `SOCKET_PORT`, then 3001).
+- `postinstall: prisma generate` — Vercel & Railway both ship a fresh Prisma client.
+- `railway.json` pins the build (`prisma generate`), start (`start:socket`), and the
+  `/health` check for the socket service.
+
+### Environment variables
+
+| Variable | Vercel (web) | Railway (socket) | Note |
+|---|:---:|:---:|---|
+| `DATABASE_URL` / `DIRECT_URL` | ✅ | ✅ | both use Prisma |
+| `NEXTAUTH_SECRET` | ✅ | ✅ | **byte-identical** — web signs the socket JWT, socket verifies it |
+| `NEXTAUTH_URL` | ✅ | — | the `…vercel.app` URL |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✅ | — | |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | ✅ | — | rotate before deploy |
+| `YOUTUBE_API_KEY` | ✅ | — | |
+| `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | ✅ | — | |
+| `NEXT_PUBLIC_APP_URL` | ✅ | — | the vercel URL |
+| `NEXT_PUBLIC_SOCKET_URL` | ✅ | — | the Railway public URL (`https://…`) |
+| `SOCKET_ALLOWED_ORIGINS` | — | ✅ | CORS allowlist = the vercel URL |
+
+`STRIPE_*` vars are documented in `.env.example` but the Stripe SDK isn't wired yet
+(Phase 6) — skip them.
+
+### Deploy order (resolves the URL chicken-and-egg)
+1. **Railway** — deploy the socket service; note its public URL.
+2. **Vercel** — deploy web with `NEXT_PUBLIC_SOCKET_URL` = Railway URL; note the Vercel URL.
+3. **Backfill** — set `SOCKET_ALLOWED_ORIGINS` (Railway) and `NEXTAUTH_URL` +
+   `NEXT_PUBLIC_APP_URL` (Vercel) to the now-known URLs; redeploy both.
+4. **Migrate** — `npx prisma migrate deploy` against the prod DB (uses `DIRECT_URL`).
+5. **Google OAuth** — add `https://<vercel-url>/api/auth/callback/google` to the
+   Authorized redirect URIs in Google Cloud Console.
+
+### Must-verify
+- `NEXTAUTH_SECRET` matches on both hosts (mismatch = socket auth fails silently).
+- LiveKit credentials rotated (prior keys were exposed in chat last session).
+- Set `AUTH_TRUST_HOST=true` only if NextAuth throws `UntrustedHost` (Vercel usually
+  auto-detects).
+
+### Post-deploy smoke test
+- [ ] Google sign-in on the live URL.
+- [ ] Create room → add a YouTube video → host play / pause / seek.
+- [ ] Second user joins by code → playback syncs, chat sends, reactions float.
+- [ ] Multi-party voice ear test (the still-unverified path).
+
+---
+
 ## 11. All Decisions — Resolved
 
 ### Architecture Decisions
