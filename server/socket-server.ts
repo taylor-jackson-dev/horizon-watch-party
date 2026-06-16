@@ -1,3 +1,6 @@
+import { webcrypto } from "node:crypto";
+if (!globalThis.crypto) (globalThis as unknown as { crypto: Crypto }).crypto = webcrypto as Crypto;
+
 import { createServer } from "node:http";
 import express from "express";
 import { Server as IOServer, type Socket } from "socket.io";
