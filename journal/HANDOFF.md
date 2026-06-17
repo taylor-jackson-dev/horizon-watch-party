@@ -62,8 +62,11 @@ theater.
 1. ✅ ~~**Live viewer count**~~ — FIXED in 4.4 (socket-driven `room:presence`). No more refresh-to-update.
 2. **B2 — Voice mic on mobile Safari** — `NotAllowedError`. Needs better permission
    request flow + user-facing error message.
-3. **B3 — YouTube player black screen on first load** — page refresh fixes it.
-   Timing/race condition in IFrame API initialization.
+3. 🔧 **B3 — YouTube black screen on first load** — FIX APPLIED (pending live verify).
+   Root cause: VideoPlayer created the player via an async `.then()` while a separate
+   effect swapped `videoId` — racy, plus the container only mounted when a video
+   existed. Restructured to always-mount the container + a single load/cue effect
+   gated on a `ready` flag. See `journal/PHASE_4_4_PROFILE.md` follow-up.
 
 ---
 

@@ -93,4 +93,18 @@ Client:
 ## Still-open bugs (carried from deployment, not in 4.4 scope)
 
 - **B2** — Voice mic on mobile Safari: `NotAllowedError`; needs a better permission-request flow + user-facing error.
-- **B3** — YouTube player black screen on first load; refresh fixes it. IFrame API init race.
+
+## Follow-up (post-4.4 commit) — B3 fix
+
+**B3 — YouTube black screen on first load: FIX APPLIED (pending live verify).**
+
+Root cause was a timing race in `components/room/VideoPlayer.tsx`, not the loader:
+- The player was created **once on mount inside an async `.then()`**, while a *separate* effect swapped the video on `videoId` change. If `videoId` changed (or socket initial-state arrived) before the API finished loading, the swap effect ran with a null `playerRef` and no-op'd, and the constructor baked in a possibly-stale id. Refresh reshuffled the timing → "worked the second time."
+- The container `<div>` only rendered when `videoId` was truthy, but the create-player effect had `[]` deps. With an empty queue at mount, `containerRef` was null, the effect bailed, and the player was **never** created (black box until refresh re-supplied the item via SSR).
+
+Fix (deterministic, timing-independent):
+- Always mount the container div (player is created on mount even with an empty queue).
+- Construct the player **without** a `videoId`.
+- A single load/cue effect gated on a new `isReady` flag (set in YT `onReady`) applies the **current** `videoId` the moment the player is ready, and re-applies on any change. Host → `loadVideoById`, viewer → `cueVideoById` (unchanged semantics).
+
+Verify live: host video plays, viewer cues + syncs, switching queue items works, adding the first video to an empty room shows it **without refresh**, and no first-load black screen across a few cold loads. (Couldn't be click-tested locally — auth-gated + race is intermittent — so reasoned from the code; user confirms on the deployed site.)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useImperativeHandle, useRef, forwardRef } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import {
   loadYouTubeIframeApi,
   YT_PLAYER_STATE,
@@ -52,6 +52,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
   ) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const playerRef = useRef<YTPlayer | null>(null);
+    // Flips true on the YT onReady event. Gates the load/cue effect below so
+    // the current videoId is applied deterministically once the player exists,
+    // regardless of how the async API-load timing races with prop changes.
+    const [isReady, setIsReady] = useState(false);
 
     // Keep latest handler refs without re-creating the player.
     const handlersRef = useRef({ onReady, onPlay, onPause, onEnded, onCued });
@@ -84,7 +88,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           playerRef.current = new YT.Player(host, {
             width: "100%",
             height: "100%",
-            videoId: videoId ?? undefined,
+            // No videoId here — the load/cue effect applies the current id once
+            // the player is ready, so a slow API load can't bake in a stale id
+            // or miss a change that happened during construction.
             playerVars: {
               autoplay: autoplay ? 1 : 0,
               controls: controlsDisabled ? 0 : 1,
@@ -102,7 +108,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
               origin: window.location.origin,
             },
             events: {
-              onReady: () => handlersRef.current.onReady?.(),
+              onReady: () => {
+                setIsReady(true);
+                handlersRef.current.onReady?.();
+              },
               onStateChange: (e) => {
                 if (typeof window !== "undefined" && window.localStorage?.getItem("wp:debug") === "1") {
                   // eslint-disable-next-line no-console
@@ -151,14 +160,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Swap the loaded video when videoId changes.
+    // Load (host) or cue (viewer) the current video once the player reports
+    // ready, and again whenever videoId changes. Gating on isReady is what
+    // removes the init race: an id that's set or changes before the player
+    // exists is simply (re)applied the moment the player is ready.
     useEffect(() => {
       const p = playerRef.current;
       const dbg = typeof window !== "undefined" && window.localStorage?.getItem("wp:debug") === "1";
-      if (!p || !videoId) {
+      if (!isReady || !p || !videoId) {
         if (dbg) {
           // eslint-disable-next-line no-console
-          console.log("[WP][player] videoId effect skipped", { videoId, hasPlayer: !!p });
+          console.log("[WP][player] load effect skipped", { videoId, isReady, hasPlayer: !!p });
         }
         return;
       }
@@ -168,14 +180,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       }
       if (autoplay) p.loadVideoById(videoId);
       else p.cueVideoById(videoId);
-    }, [videoId, autoplay]);
+    }, [isReady, videoId, autoplay]);
 
     return (
-      <div className="wp-player-frame aspect-video w-full overflow-hidden rounded-xl bg-black">
-        {videoId ? (
-          <div ref={containerRef} className="w-full h-full" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-brand-muted text-sm">
+      <div className="wp-player-frame relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+        {/* Container is ALWAYS mounted so the player is created on mount even
+            with an empty queue — fixes the "add a video, still black until
+            refresh" case. YT replaces this div with its iframe. */}
+        <div ref={containerRef} className="w-full h-full" />
+        {!videoId && (
+          <div className="absolute inset-0 flex items-center justify-center text-brand-muted text-sm">
             No video selected — add one to the queue to begin.
           </div>
         )}
