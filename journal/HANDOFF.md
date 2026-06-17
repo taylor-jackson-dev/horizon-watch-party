@@ -7,11 +7,13 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 ## Resume phrase (paste this first in a new chat)
 
-> **Resume Watch Party. Deployment is complete — the app is live at
-> `https://water-party-private-repo.vercel.app`. Next phase is 4.4 (Avatars +
-> Profile Customization). Read `journal/HANDOFF.md` and `PLAN.md` → Phase 4.4
-> section for context, review the candidate list with the user, approve/cut,
-> then begin.**
+> **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
+> Phase 4.4 (display-name edit + presence-based live count + step-away, plus a
+> mobile fullscreen fix) is code-complete and deployed. First, confirm the 4.4
+> live-verification on two devices passed (see checklist in
+> `journal/PHASE_4_4_PROFILE.md`); then move to Phase 5 (View Modes & UI Polish)
+> — read `journal/HANDOFF.md` and `PLAN.md` → Phase 5 candidates, review with the
+> user, approve/cut, then begin.**
 
 ---
 
@@ -38,7 +40,10 @@ theater.
   - Web: `https://water-party-private-repo.vercel.app`
   - Socket: `https://water-party-private-repo-production.up.railway.app`
   - Smoke test passed (see `journal/PHASE_4_DEPLOYMENT.md`)
-- 🔄 **Next: Phase 4.4** — Avatars + Profile Customization
+- ✅ **Phase 4.4 complete** (2026-06-17) — display-name edit, presence-based live
+  count, step-away mode, mobile fullscreen fix. See `journal/PHASE_4_4_PROFILE.md`.
+  Static checks pass; live 2-device verification pending user confirmation.
+- 🔄 **Next: Phase 5** — View Modes & UI Polish
 
 ---
 
@@ -52,13 +57,12 @@ theater.
 
 ---
 
-## Known issues (fix in Phase 4.4)
+## Known issues
 
-1. **Live viewer count** — member count requires page refresh; refresh restarts video.
-   Fix: socket-driven presence count (already in PLAN.md Phase 4.4 candidates).
-2. **Voice mic on mobile Safari** — `NotAllowedError`. Needs better permission
+1. ✅ ~~**Live viewer count**~~ — FIXED in 4.4 (socket-driven `room:presence`). No more refresh-to-update.
+2. **B2 — Voice mic on mobile Safari** — `NotAllowedError`. Needs better permission
    request flow + user-facing error message.
-3. **YouTube player black screen on first load** — page refresh fixes it.
+3. **B3 — YouTube player black screen on first load** — page refresh fixes it.
    Timing/race condition in IFrame API initialization.
 
 ---

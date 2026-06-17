@@ -10,6 +10,11 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect("/signin?callbackUrl=/dashboard");
   const userId = session.user.id;
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, email: true },
+  });
+
   const memberships = await prisma.roomMember.findMany({
     where: { userId, status: { in: ["ACTIVE", "LEFT"] } },
     orderBy: { joinedAt: "desc" },
@@ -33,13 +38,16 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-brand-gold">Your rooms</h1>
           <p className="text-sm text-brand-muted">
-            Signed in as {session.user.name ?? session.user.email}
+            Signed in as {user?.displayName ?? user?.email ?? session.user.email}
             {session.user.tier === "PREMIUM" && " · Premium"}
           </p>
         </div>
-        <form action={handleSignOut}>
-          <button type="submit" className="btn-ghost text-sm">Sign out</button>
-        </form>
+        <div className="flex items-center gap-2">
+          <Link href="/settings" className="btn-ghost text-sm">Settings</Link>
+          <form action={handleSignOut}>
+            <button type="submit" className="btn-ghost text-sm">Sign out</button>
+          </form>
+        </div>
       </header>
 
       <DashboardActions />

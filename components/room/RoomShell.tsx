@@ -10,6 +10,7 @@ import { ChatPanel } from "./ChatPanel";
 import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
 import { VoicePanel } from "./VoicePanel";
+import { PresencePanel } from "./PresencePanel";
 
 interface RoomShellProps {
   roomId: string;
@@ -24,6 +25,8 @@ interface RoomShellProps {
   voiceEnabled: boolean;
   isMicMuted: boolean;
   isViewOnly: boolean;
+  initialActiveCount: number;
+  capacity: number;
 }
 
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -61,17 +64,28 @@ export function RoomShell({
   voiceEnabled,
   isMicMuted,
   isViewOnly,
+  initialActiveCount,
+  capacity,
 }: RoomShellProps) {
   const [items, setItems] = useState<QueueItem[]>(initialItems);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
     initialItems[0]?.id ?? null,
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  // Step-away (AFK). While away, a viewer detaches from sync: incoming host
+  // state is ignored and their own play/pause won't pull a re-sync. The ref
+  // mirrors the state so the socket handlers (stable closures) read it live.
+  const [isAway, setIsAway] = useState(false);
+  const isAwayRef = useRef(false);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const playerReadyRef = useRef(false);
   const isApplyingRemoteRef = useRef(false);
   const playerStageRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Fallback for browsers without element Fullscreen API (iPhone Safari only
+  // fullscreens <video>, never a <div>). When native FS is unavailable we pin
+  // the stage to the viewport via CSS instead so the button still works.
+  const [cssFullscreen, setCssFullscreen] = useState(false);
   // Holds a video:state event that we couldn't apply yet — usually because
   // the player is mid-itemSwitch and the new video hasn't cued. Drained by
   // the effect that watches currentItemId below.
@@ -192,11 +206,12 @@ export function RoomShell({
     setIsPlaying(true);
     if (isHost) {
       emitState({ isPlaying: true });
-    } else if (socket) {
+    } else if (socket && !isAwayRef.current) {
       // Viewer-initiated play (e.g. they paused earlier and hit resume,
       // or used the YT controls to seek). Their local position has likely
       // diverged from the host — pull the authoritative state immediately
-      // instead of waiting for the next host heartbeat (~10s).
+      // instead of waiting for the next host heartbeat (~10s). Suppressed
+      // while away so a stepped-away viewer isn't yanked back into sync.
       dbg("viewer play → request-sync");
       socket.emit("video:request-sync", { roomId });
     }
@@ -207,10 +222,11 @@ export function RoomShell({
     setIsPlaying(false);
     if (isHost) {
       emitState({ isPlaying: false });
-    } else if (socket) {
+    } else if (socket && !isAwayRef.current) {
       // Same logic as handlePlay — re-sync to host on any viewer-driven
       // state change. If the host is actually playing, the response will
       // snap the viewer back into play; if the host is also paused, no-op.
+      // Suppressed while away so the viewer can pause and stay paused.
       dbg("viewer pause → request-sync");
       socket.emit("video:request-sync", { roomId });
     }
@@ -248,6 +264,10 @@ export function RoomShell({
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    isAwayRef.current = isAway;
+  }, [isAway]);
 
   useEffect(() => {
     if (!isHost || !socket) return;
@@ -353,7 +373,11 @@ export function RoomShell({
   // Subscribe to ongoing video:state events (viewer only)
   useEffect(() => {
     if (isHost || !socket) return;
-    const onState = (state: VideoSyncState) => applyRemoteStateRef.current(state);
+    const onState = (state: VideoSyncState) => {
+      // While away, ignore host corrections — let local playback run free.
+      if (isAwayRef.current) return;
+      applyRemoteStateRef.current(state);
+    };
     socket.on("video:state", onState);
     return () => {
       socket.off("video:state", onState);
@@ -387,17 +411,36 @@ export function RoomShell({
       webkitFullscreenElement?: Element;
     };
     const fsEl = document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+
+    // Exit whichever mode is currently active.
     if (fsEl) {
       if (document.exitFullscreen) void document.exitFullscreen();
       else doc.webkitExitFullscreen?.();
-    } else {
-      const target = el as HTMLDivElement & {
-        webkitRequestFullscreen?: () => Promise<void>;
-      };
+      return;
+    }
+    if (cssFullscreen) {
+      setCssFullscreen(false);
+      return;
+    }
+
+    // Enter: prefer the native Fullscreen API; fall back to a CSS viewport-pin
+    // when it's unavailable. iPhone Safari exposes no element fullscreen
+    // (requestFullscreen/webkitRequestFullscreen are absent on a <div>), so
+    // the native branch silently no-ops there — detect and use CSS instead.
+    const target = el as HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+    };
+    const canNative =
+      document.fullscreenEnabled !== false &&
+      (typeof target.requestFullscreen === "function" ||
+        typeof target.webkitRequestFullscreen === "function");
+    if (canNative) {
       if (target.requestFullscreen) void target.requestFullscreen();
       else target.webkitRequestFullscreen?.();
+    } else {
+      setCssFullscreen(true);
     }
-  }, []);
+  }, [cssFullscreen]);
 
   // Host: select a different queue item
   const handleSelect = useCallback(
@@ -409,11 +452,30 @@ export function RoomShell({
     [isHost, emitState],
   );
 
+  // Step-away toggle. Broadcasts the AFK flag so the roster updates for
+  // everyone. On return we ignored host state while away, so pull the
+  // authoritative state once to snap cleanly back into sync.
+  const handleToggleAway = useCallback(() => {
+    setIsAway((prev) => {
+      const next = !prev;
+      if (socket) {
+        socket.emit("presence:set-away", { roomId, away: next });
+        if (!next) socket.emit("video:request-sync", { roomId });
+      }
+      return next;
+    });
+  }, [socket, roomId]);
+
+  const fullscreenActive = isFullscreen || cssFullscreen;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
       <div className="space-y-6 min-w-0">
         <section className="space-y-2">
-          <div ref={playerStageRef} className="wp-player-stage relative">
+          <div
+            ref={playerStageRef}
+            className={`wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}`}
+          >
             <VideoPlayer
               ref={playerRef}
               videoId={currentVideoId}
@@ -436,10 +498,10 @@ export function RoomShell({
               type="button"
               onClick={toggleFullscreen}
               className="pointer-events-auto absolute bottom-3 right-14 w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
-              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              aria-label={fullscreenActive ? "Exit fullscreen" : "Enter fullscreen"}
+              title={fullscreenActive ? "Exit fullscreen" : "Fullscreen"}
             >
-              {isFullscreen ? (
+              {fullscreenActive ? (
                 <svg
                   viewBox="0 0 24 24"
                   width="18"
@@ -496,6 +558,15 @@ export function RoomShell({
       </div>
 
       <aside className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-4 flex flex-col gap-3 min-h-0">
+        <PresencePanel
+          socket={socket}
+          currentUserId={currentUserId}
+          initialCount={initialActiveCount}
+          capacity={capacity}
+          canStepAway={!isHost}
+          isAway={isAway}
+          onToggleAway={handleToggleAway}
+        />
         <VoicePanel
           roomId={roomId}
           voiceEnabled={voiceEnabled}

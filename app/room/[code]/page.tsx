@@ -77,8 +77,6 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
           {room.isPrivate ? "Private" : "Public"}
           {" · "}
           Status: {room.status}
-          {" · "}
-          {room._count.members}/{room.capacity} active
           {membership && (
             <>
               {" · "}You are{" "}
@@ -111,6 +109,8 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
           voiceEnabled={room.voiceEnabled}
           isMicMuted={isMicMuted}
           isViewOnly={isViewOnly}
+          initialActiveCount={room._count.members}
+          capacity={room.capacity}
         />
       ) : (
         <section className="card space-y-2">

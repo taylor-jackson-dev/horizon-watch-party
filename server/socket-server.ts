@@ -117,6 +117,64 @@ const io = new IOServer(httpServer, {
   },
 });
 
+// ── Presence ──────────────────────────────────────────────────────
+// Per-room live presence: the source of truth for "who is connected
+// right now". Replaces the SSR member-count query, which only reflected
+// DB membership and went stale the instant someone closed a tab. Keyed
+// channel → userId → entry. A user can hold multiple sockets (multiple
+// tabs); we track the socket set so they only drop from presence when
+// their LAST socket disconnects. `away` powers Step-away mode — the user
+// stays connected and counted, just flagged AFK.
+interface PresenceEntry {
+  sockets: Set<string>;
+  displayName: string;
+  away: boolean;
+}
+const roomPresence = new Map<string, Map<string, PresenceEntry>>();
+
+function presenceSnapshot(channel: string): {
+  count: number;
+  viewers: Array<{ userId: string; displayName: string; away: boolean }>;
+} {
+  const members = roomPresence.get(channel);
+  if (!members) return { count: 0, viewers: [] };
+  const viewers = Array.from(members.entries()).map(([id, e]) => ({
+    userId: id,
+    displayName: e.displayName,
+    away: e.away,
+  }));
+  return { count: viewers.length, viewers };
+}
+
+function broadcastPresence(channel: string): void {
+  io.to(channel).emit("room:presence", presenceSnapshot(channel));
+}
+
+function addPresence(channel: string, userId: string, displayName: string, socketId: string): void {
+  let members = roomPresence.get(channel);
+  if (!members) {
+    members = new Map();
+    roomPresence.set(channel, members);
+  }
+  const existing = members.get(userId);
+  if (existing) {
+    existing.sockets.add(socketId);
+    existing.displayName = displayName; // refresh in case the name changed since another tab joined
+  } else {
+    members.set(userId, { sockets: new Set([socketId]), displayName, away: false });
+  }
+}
+
+function removePresence(channel: string, userId: string, socketId: string): void {
+  const members = roomPresence.get(channel);
+  if (!members) return;
+  const entry = members.get(userId);
+  if (!entry) return;
+  entry.sockets.delete(socketId);
+  if (entry.sockets.size === 0) members.delete(userId);
+  if (members.size === 0) roomPresence.delete(channel);
+}
+
 // ── Auth middleware ───────────────────────────────────────────────
 io.use(async (socket, next) => {
   try {
@@ -141,6 +199,14 @@ io.on("connection", (socket: Socket) => {
 
   socket.on("disconnect", (reason) => {
     log(`- disconnect socket=${socket.id} user=${userId} reason=${reason}`);
+    // A hard disconnect (tab close, network drop) never fires room:leave,
+    // so clean up presence for every room this socket was in and tell the
+    // rest of the room. Without this the live count would only ever go up.
+    s.data.rooms.forEach((channel) => {
+      socket.to(channel).emit("room:peer-left", { userId, socketId: socket.id });
+      removePresence(channel, userId, socket.id);
+      broadcastPresence(channel);
+    });
   });
 
   socket.on("heartbeat", (...args: unknown[]) => {
@@ -174,7 +240,7 @@ io.on("connection", (socket: Socket) => {
       try {
         const member = await prisma.roomMember.findUnique({
           where: { roomId_userId: { roomId, userId } },
-          select: { status: true },
+          select: { status: true, user: { select: { displayName: true } } },
         });
         if (!member) return cb?.({ ok: false, error: "Not a member of this room" });
         if (member.status === "BANNED") {
@@ -186,6 +252,11 @@ io.on("connection", (socket: Socket) => {
         s.data.rooms.add(channel);
         log(`  join     socket=${socket.id} user=${userId} room=${roomId}`);
         socket.to(channel).emit("room:peer-joined", { userId, socketId: socket.id });
+
+        // Register live presence and push the updated roster to the whole
+        // room (the joiner is already in the channel, so they get it too).
+        addPresence(channel, userId, member.user.displayName, socket.id);
+        broadcastPresence(channel);
 
         // Hand the joiner the current playback state if any, so they
         // can catch up immediately.
@@ -212,9 +283,27 @@ io.on("connection", (socket: Socket) => {
       socket
         .to(channel)
         .emit("room:peer-left", { userId, socketId: socket.id });
+      removePresence(channel, userId, socket.id);
+      broadcastPresence(channel);
       cb?.({ ok: true });
     },
   );
+
+  // ── Step-away (presence flag) ─────────────────────────────────────
+  // A member toggles AFK. They stay connected and counted; the flag just
+  // marks them away in the roster. The sync-relaxation while away is a
+  // pure client concern (the away viewer stops applying host state) — the
+  // server only owns the shared flag so everyone sees the same roster.
+  socket.on("presence:set-away", (payload: { roomId?: string; away?: boolean }) => {
+    const roomId = payload?.roomId;
+    if (!roomId) return;
+    const channel = roomChannel(roomId);
+    if (!s.data.rooms.has(channel)) return;
+    const entry = roomPresence.get(channel)?.get(userId);
+    if (!entry) return;
+    entry.away = !!payload.away;
+    broadcastPresence(channel);
+  });
 
   // ── Video sync ──────────────────────────────────────────────────
   // The host emits `video:state` whenever the current playback

@@ -130,3 +130,24 @@
   height: 100%;
   border-radius: 0;
 }
+
+/* CSS pseudo-fullscreen — fallback for browsers without element Fullscreen
+   API support (notably iPhone Safari, which only fullscreens <video>). Pins
+   the stage to the viewport so our button still fills the screen; the dvh
+   units track the iOS address-bar resize so there's no gap or overflow. */
+.wp-player-stage.wp-fs-css {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+}
+.wp-player-stage.wp-fs-css .wp-player-frame {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}

@@ -266,17 +266,17 @@ watch-party/
 - [x] **4.1** Real-time text chat (Socket.io room channel)
 - [x] **4.2** Animated emoji reactions (overlay + chat)
 - [x] **4.3** LiveKit voice chat (push-to-talk + open mic)
-- [ ] **4.4** User avatars + basic profile customization
+- [x] **4.4** Profile, presence & step-away (2026-06-17) — shipped display-name edit, presence-based live count, step-away mode; + mobile fullscreen fix. See `journal/PHASE_4_4_PROFILE.md`.
 
-**4.4 Candidates (proposed — discuss + approve/cut at phase start)**
-- *Avatar upload to Supabase Storage* — already-provisioned bucket, simple file picker + client-side crop. Replaces OAuth-derived `avatarUrl`.
-- *Display-name edit* — currently locked to OAuth provider name. Field exists; just needs a settings UI.
-- *Status messages under name* — short text like "🍕 grabbing pizza" shown in voice/chat lists. Tiny socialness, almost free.
-- *Lurker mode UI* — surface the existing `isViewOnly` schema flag so shy friends can opt in. Free; schema is already there.
-- *Avatar reactions* — your avatar bubbles a small emoji next to it when you react, in addition to the overlay float. Less chat spam, more presence.
-- *Per-participant local volume slider* — voice polish. "Sarah's mic is hot" universal fix. LiveKit supports it.
-- *"Step away" mode* — viewer flags AFK; video keeps playing for them but their re-sync is relaxed. Distinct from leaving.
-- *Presence-based active count* — replace SSR `members where status=ACTIVE` count with socket-driven presence so the displayed count reflects who's actually connected. (Carried from Phase 4.3 readiness pass.)
+**4.4 Candidates — disposition (reviewed + approved/cut at phase start)**
+- ✅ *Display-name edit* — SHIPPED. Settings UI + `PATCH /api/users/me`. No migration (field existed).
+- ✅ *Presence-based active count* — SHIPPED. Socket `room:presence` channel + PresencePanel; also fixed the refresh-required count bug.
+- ✅ *"Step away" mode* — SHIPPED. AFK flag on the presence entry; viewer detaches from re-sync while away.
+- ✂️ *Avatar upload to Supabase Storage* — CUT (deferred).
+- ✂️ *Status messages under name* — CUT (deferred).
+- ✂️ *Lurker mode UI* (`isViewOnly`) — CUT (deferred).
+- ✂️ *Avatar reactions* — CUT (deferred).
+- ✂️ *Per-participant local volume slider* — CUT (deferred).
 
 ### Phase 5 — View Modes & UI Polish
 - [ ] Theater mode (avatar rail below screen)
@@ -434,9 +434,11 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 4.4: Avatars + Profile Customization
+## Next Step → Phase 5: View Modes & UI Polish
 
-Phases 1–3 + 4.1–4.3 are shipped. Next active phase is 4.4 — graduating identity from "whatever OAuth gave us" to user-owned. Candidates (above) to be reviewed and approved/cut before scoping.
+Phases 1–4.4 are shipped. Phase 4.4 delivered display-name edit, presence-based live viewer count, and step-away mode (+ a mobile fullscreen fix); avatar upload and the other profile candidates were cut/deferred. Next active phase is 5 — theater mode, split view, mobile/PWA, dark cinema theme. Candidates (above) to be reviewed and approved/cut before scoping.
+
+Carry-over bugs still open: **B2** voice mic on mobile Safari (`NotAllowedError`), **B3** YouTube black-screen-on-first-load race. The 4.4 live-verification pass on two devices is the immediate to-do before declaring 4.4 fully closed.
 
 ### Already-shipped highlights (1–4.3)
 - Foundation, room system, video sync engine
