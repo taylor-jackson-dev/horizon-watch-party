@@ -8,12 +8,11 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phase 4.4 (display-name edit + presence-based live count + step-away, plus a
-> mobile fullscreen fix) is code-complete and deployed. First, confirm the 4.4
-> live-verification on two devices passed (see checklist in
-> `journal/PHASE_4_4_PROFILE.md`); then move to Phase 5 (View Modes & UI Polish)
-> — read `journal/HANDOFF.md` and `PLAN.md` → Phase 5 candidates, review with the
-> user, approve/cut, then begin.**
+> Phase 4.4 (display-name edit + presence-based live count + step-away + mobile
+> fullscreen fix) and the B3 black-screen fix are shipped and verified live on two
+> devices (2026-06-17). Next is Phase 5 (View Modes & UI Polish) — read
+> `journal/HANDOFF.md` and `PLAN.md` → Phase 5 candidates, review with the user,
+> approve/cut, then begin.**
 
 ---
 
@@ -40,9 +39,10 @@ theater.
   - Web: `https://water-party-private-repo.vercel.app`
   - Socket: `https://water-party-private-repo-production.up.railway.app`
   - Smoke test passed (see `journal/PHASE_4_DEPLOYMENT.md`)
-- ✅ **Phase 4.4 complete** (2026-06-17) — display-name edit, presence-based live
-  count, step-away mode, mobile fullscreen fix. See `journal/PHASE_4_4_PROFILE.md`.
-  Static checks pass; live 2-device verification pending user confirmation.
+- ✅ **Phase 4.4 complete + verified live** (2026-06-17) — display-name edit,
+  presence-based live count, step-away mode, mobile fullscreen fix. Confirmed on
+  two devices (host + viewer). See `journal/PHASE_4_4_PROFILE.md`.
+- ✅ **B3 fixed + verified** (2026-06-17) — YouTube black-screen-on-first-load race.
 - 🔄 **Next: Phase 5** — View Modes & UI Polish
 
 ---
@@ -62,7 +62,7 @@ theater.
 1. ✅ ~~**Live viewer count**~~ — FIXED in 4.4 (socket-driven `room:presence`). No more refresh-to-update.
 2. **B2 — Voice mic on mobile Safari** — `NotAllowedError`. Needs better permission
    request flow + user-facing error message.
-3. 🔧 **B3 — YouTube black screen on first load** — FIX APPLIED (pending live verify).
+3. ✅ ~~**B3 — YouTube black screen on first load**~~ — FIXED + verified (2026-06-17).
    Root cause: VideoPlayer created the player via an async `.then()` while a separate
    effect swapped `videoId` — racy, plus the container only mounted when a video
    existed. Restructured to always-mount the container + a single load/cue effect

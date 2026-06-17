@@ -1,7 +1,7 @@
 # Phase 4.4 — Profile, Presence & Step-Away
 
 **Date:** 2026-06-17
-**Status:** Code complete, static checks pass; live multi-device verification pending (user, post-deploy)
+**Status:** Shipped + verified live on two devices (host + viewer), 2026-06-17
 
 ---
 
@@ -74,7 +74,7 @@ Client:
 - `npm run typecheck` — pass
 - `npm run lint` — pass (no warnings)
 - Both dev servers boot clean; routes compile and guard correctly.
-- **Live verification (user, post-deploy, 2 devices):**
+- **Live verification — PASSED on two devices (host + viewer), 2026-06-17:**
   - F1 — rename persists across refresh; shows in dashboard greeting, room roster, chat.
   - B1/F8 — Watching panel shows live count + roster without refresh; second device joining bumps the count live.
   - F7 — viewer Step away dims their dot + shows "· 1 away"; video keeps playing while away; I'm back snaps cleanly to host.
@@ -96,7 +96,7 @@ Client:
 
 ## Follow-up (post-4.4 commit) — B3 fix
 
-**B3 — YouTube black screen on first load: FIX APPLIED (pending live verify).**
+**B3 — YouTube black screen on first load: FIXED + verified live (2026-06-17).**
 
 Root cause was a timing race in `components/room/VideoPlayer.tsx`, not the loader:
 - The player was created **once on mount inside an async `.then()`**, while a *separate* effect swapped the video on `videoId` change. If `videoId` changed (or socket initial-state arrived) before the API finished loading, the swap effect ran with a null `playerRef` and no-op'd, and the constructor baked in a possibly-stale id. Refresh reshuffled the timing → "worked the second time."
@@ -107,4 +107,4 @@ Fix (deterministic, timing-independent):
 - Construct the player **without** a `videoId`.
 - A single load/cue effect gated on a new `isReady` flag (set in YT `onReady`) applies the **current** `videoId` the moment the player is ready, and re-applies on any change. Host → `loadVideoById`, viewer → `cueVideoById` (unchanged semantics).
 
-Verify live: host video plays, viewer cues + syncs, switching queue items works, adding the first video to an empty room shows it **without refresh**, and no first-load black screen across a few cold loads. (Couldn't be click-tested locally — auth-gated + race is intermittent — so reasoned from the code; user confirms on the deployed site.)
+Verified live (2026-06-17): host video plays, viewer cues + syncs, switching queue items works, adding the first video to an empty room shows it **without refresh**, and no first-load black screen across cold loads. (Couldn't be click-tested locally — auth-gated + the race is intermittent — so reasoned from the code, then confirmed by the user on the deployed site across two devices.)
