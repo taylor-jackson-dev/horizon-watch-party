@@ -91,7 +91,7 @@ export function RoomShell({
   // the effect that watches currentItemId below.
   const [pendingRemoteState, setPendingRemoteState] = useState<VideoSyncState | null>(null);
 
-  const { socket, status: socketStatus, error: socketError, initialState, serverTimeSkewMs } =
+  const { socket, status: socketStatus, error: socketError, initialState, serverTimeSkewMs, syncEpoch } =
     useRoomSocket(roomId);
 
   const currentItem = useMemo(
@@ -384,6 +384,32 @@ export function RoomShell({
     };
   }, [isHost, socket]);
 
+  // ── Reconcile after a reconnect ─────────────────────────────────
+  // syncEpoch bumps on every (re)join. Epoch 1 is the initial join
+  // (handled by the initial-state effect above); epoch ≥ 2 means the socket
+  // reconnected and we missed whatever was broadcast while we were gone.
+  // Heal it: refetch the queue, then either push our authoritative state
+  // (host) or pull the host's (viewer), and restore the step-away flag the
+  // server clears on a fresh presence entry. The last-epoch ref keeps this
+  // from firing when unrelated deps (emitState/refresh) change identity
+  // during normal playback — it only acts when the epoch actually advances.
+  const lastReconciledEpoch = useRef(0);
+  useEffect(() => {
+    if (syncEpoch <= 1 || !socket) return;
+    if (lastReconciledEpoch.current === syncEpoch) return;
+    lastReconciledEpoch.current = syncEpoch;
+    dbg("reconnect reconcile", { syncEpoch, isHost });
+    void refresh();
+    if (isHost) {
+      emitState();
+    } else if (!isAwayRef.current) {
+      socket.emit("video:request-sync", { roomId });
+    }
+    if (isAwayRef.current) {
+      socket.emit("presence:set-away", { roomId, away: true });
+    }
+  }, [syncEpoch, socket, isHost, refresh, emitState, roomId]);
+
   // ── Fullscreen ──────────────────────────────────────────────────
   // We fullscreen the WHOLE player stage (iframe + reaction overlay +
   // picker), not the YouTube iframe alone — otherwise the iframe covers
@@ -580,6 +606,7 @@ export function RoomShell({
             currentUserId={currentUserId}
             chatEnabled={chatEnabled}
             isChatRestricted={isChatRestricted}
+            syncEpoch={syncEpoch}
           />
         </div>
       </aside>

@@ -33,6 +33,8 @@ interface ChatPanelProps {
   chatEnabled: boolean;
   /** Per-member host restriction. If true, this user can read but not send. */
   isChatRestricted: boolean;
+  /** Bumps on every socket (re)join; epoch ≥ 2 triggers a gap-healing refetch. */
+  syncEpoch: number;
 }
 
 // If the user is within this many pixels of the bottom of the scroll
@@ -47,6 +49,7 @@ export function ChatPanel({
   currentUserId,
   chatEnabled,
   isChatRestricted,
+  syncEpoch,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyStatus, setHistoryStatus] = useState<"idle" | "loading" | "loaded" | "error">(
@@ -109,6 +112,29 @@ export function ChatPanel({
       socket.off("chat:message", onMessage);
     };
   }, [socket]);
+
+  // ── Heal chat gaps after a reconnect ─────────────────────────────
+  // Messages broadcast while the socket was down are never replayed, so on a
+  // reconnect (syncEpoch ≥ 2) we refetch the recent window and merge by id.
+  // Epoch ≤ 1 is the initial load, already covered by the history effect.
+  useEffect(() => {
+    if (syncEpoch <= 1) return;
+    let cancelled = false;
+    fetch(`/api/rooms/${roomId}/messages`)
+      .then((res) =>
+        res.ok ? (res.json() as Promise<{ messages: ChatMessage[] }>) : Promise.reject(),
+      )
+      .then((data) => {
+        if (cancelled) return;
+        setMessages((prev) => mergeMessagesById(prev, data.messages));
+      })
+      .catch(() => {
+        /* transient — the next reconnect or a manual refresh will heal */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [syncEpoch, roomId]);
 
   // ── Auto-scroll on new message ───────────────────────────────────
   // Capture scroll position BEFORE the DOM update for this render commits,
@@ -312,6 +338,17 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
     <div className="shrink-0 w-7 h-7 rounded-full bg-brand-elevated flex items-center justify-center text-xs font-medium text-brand-muted">
       {initials || "?"}
     </div>
+  );
+}
+
+// Merge two message lists by id (server copy wins so edits like deletedAt
+// propagate), sorted oldest-first.
+function mergeMessagesById(a: ChatMessage[], b: ChatMessage[]): ChatMessage[] {
+  const byId = new Map<string, ChatMessage>();
+  for (const m of a) byId.set(m.id, m);
+  for (const m of b) byId.set(m.id, m);
+  return Array.from(byId.values()).sort(
+    (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime(),
   );
 }
 
