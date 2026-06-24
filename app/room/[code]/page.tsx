@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isHostRole, roomPublicSelect } from "@/lib/rooms";
 import { RoomShell } from "@/components/room/RoomShell";
+import { RoomHeadcountBadge } from "@/components/room/RoomHeadcountBadge";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, Badge } from "@/components/ui";
 import { ArrowLeftIcon } from "@/components/ui/icons";
@@ -100,7 +101,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
             <Badge tone={room.isPrivate ? "default" : "muted"}>
               {room.isPrivate ? "Private" : "Public"}
             </Badge>
-            <Badge tone={room.status === "ACTIVE" ? "success" : "muted"}>{room.status}</Badge>
+            <RoomHeadcountBadge initialCount={room._count.members} capacity={room.capacity} />
           </div>
         </header>
 

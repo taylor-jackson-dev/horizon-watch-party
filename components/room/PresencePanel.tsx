@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { Panel, Badge, Button } from "@/components/ui";
 import { UsersIcon } from "@/components/ui/icons";
+import { publishRoomPresenceCount } from "@/lib/room-presence-store";
 
 interface Viewer {
   userId: string;
@@ -44,7 +45,10 @@ export function PresencePanel({
 
   useEffect(() => {
     if (!socket) return;
-    const onPresence = (snapshot: PresenceSnapshot) => setPresence(snapshot);
+    const onPresence = (snapshot: PresenceSnapshot) => {
+      setPresence(snapshot);
+      publishRoomPresenceCount(snapshot.count);
+    };
     socket.on("room:presence", onPresence);
     return () => {
       socket.off("room:presence", onPresence);
