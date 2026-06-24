@@ -2,7 +2,7 @@
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
 > **Last Updated:** 2026-06-24  
-> **Phase:** 5.2 — Dark cinema design system (build-green, live-verify pending) · Next: 5.3 view modes
+> **Phase:** 5.3 — View modes (next) · 5.2 design system complete + verified live
 
 ---
 
@@ -288,11 +288,13 @@ sub-phase closes with the journal + two-device-verify ritual.
   on every reconnect, mint a fresh token per attempt (survives the 1h JWT TTL),
   and reconcile video/chat/queue/presence/step-away on a `syncEpoch` bump. Kills
   the "refresh fixes it" desync. See `journal/PHASE_5_1_SYNC_RELIABILITY.md`.
-- [~] **5.2** Dark cinema design system + layout overhaul 🟡 (2026-06-24,
-  build-green; live-verify pending) — CSS-variable theming engine keyed by
+- [x] **5.2** Dark cinema design system + layout overhaul ✅ (2026-06-24, verified
+  live on two devices) — CSS-variable theming engine keyed by
   `data-theme`/`data-lighting` (swap themes + add color/lighting control later),
   in-house UI primitives, app shell + real landing, full room restyle; sync/voice/chat
-  untouched. Premium skins still land in Phase 6. See `journal/PHASE_5_2_DESIGN_SYSTEM.md`.
+  untouched. One bug caught in the live pass: room header showed a perpetual `WAITING`
+  status enum → now a live "N/capacity watching" headcount badge. Premium skins still
+  land in Phase 6. See `journal/PHASE_5_2_DESIGN_SYSTEM.md`.
 - [ ] **5.3** View modes — theater rail, split-view toggle, fullscreen chat overlay *(next)*.
 - [ ] **5.4** Mobile-responsive + PWA (manifest + service worker).
 - [ ] **5.5** Invite link for public rooms (shareable link + copy/native-share).
@@ -460,16 +462,14 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ## Next Step → Phase 5.3: View Modes
 
-Phases 1–5.1 are shipped + live-verified. **Phase 5.2** (dark cinema design system
-+ layout overhaul) is implemented and pushed — build-green (typecheck + lint +
-`next build` all pass) but **not yet live-verified**: do a two-device visual pass
-first (landing, dashboard, settings, sign-in, and especially the room — stage glow,
-sticky rail under the top bar, queue/chat/voice panels, fullscreen, reactions still
-float). The engine is CSS-variable tokens keyed by `data-theme`/`data-lighting`, so
-future color/lighting control + premium skins (Phase 6) are additive. Phase 5 order:
-5.1 reliability → 5.2 design system → **5.3 view modes** (next) → 5.4 mobile/PWA →
-5.5 invite link → 5.6 delight. Once 5.2 passes its live check, the next active
-sub-phase is **5.3**: theater rail, split-view toggle, fullscreen chat overlay.
+Phases 1–5.2 are shipped + live-verified. **Phase 5.2** (dark cinema design system +
+layout overhaul) is complete and confirmed on two devices; the one bug caught in the
+live pass — a perpetual `WAITING` status enum in the room header — is fixed (live
+"N/capacity watching" headcount badge). The engine is CSS-variable tokens keyed by
+`data-theme`/`data-lighting`, so future color/lighting control + premium skins
+(Phase 6) are additive. Phase 5 order: 5.1 reliability → 5.2 design system →
+**5.3 view modes** (next) → 5.4 mobile/PWA → 5.5 invite link → 5.6 delight. The next
+active sub-phase is **5.3**: theater rail, split-view toggle, fullscreen chat overlay.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both

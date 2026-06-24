@@ -1,6 +1,6 @@
 # Phase 5.2 — Dark Cinema Design System + Layout Overhaul
 
-**Status:** 🟡 Build-green (typecheck + lint + `next build` all pass) — pending live two-device visual verification
+**Status:** ✅ Complete — verified live on two devices (2026-06-24)
 **Live:** web `https://water-party-private-repo.vercel.app` · socket on Railway
 
 ---
@@ -107,8 +107,10 @@ The whole engine is **CSS custom properties keyed by `data-` attributes on
 
 ## Files touched
 
-**New:** `lib/cn.ts` · `components/ui/{Button,Panel,Card,Input,Badge,icons,index}` ·
-`components/layout/{AppShell,TopBar,UserMenu}` · `app/actions/auth.ts`
+**New:** `lib/cn.ts` · `lib/room-presence-store.ts` ·
+`components/ui/{Button,Panel,Card,Input,Badge,icons,index}` ·
+`components/layout/{AppShell,TopBar,UserMenu}` ·
+`components/room/RoomHeadcountBadge.tsx` · `app/actions/auth.ts`
 **Modified:** `app/globals.css` · `tailwind.config.ts` · `app/layout.tsx` ·
 `app/page.tsx` · `app/dashboard/page.tsx` · `app/settings/page.tsx` ·
 `app/(auth)/signin/page.tsx` · `app/room/[code]/page.tsx` ·
@@ -117,13 +119,18 @@ The whole engine is **CSS custom properties keyed by `data-` attributes on
 ## Verification
 
 - ✅ `npm run typecheck` clean · `npm run lint` clean · `npm run build` clean
-  (all 13 routes compiled, fonts self-hosted, SSR fine).
-- ⏳ **Pending: live two-device visual pass** — I have **not** rendered the new
-  design in a browser; static checks confirm it compiles/builds, not that it
-  *looks* right or that the room/fullscreen/mobile layouts hold. To check live:
-  landing, sign-in, dashboard, settings, and especially the room (stage glow,
-  rail sticky behavior under the top bar, queue/chat/voice panels, fullscreen
-  button, reactions still float). Push-to-deploy for this is pre-authorized.
+  (all routes compiled, fonts self-hosted, SSR fine).
+- ✅ **Live two-device visual pass (2026-06-24)** — landing, sign-in, dashboard,
+  settings, and the room all confirmed on two devices: design, fonts, headers,
+  icons, stage glow, sticky rail under the top bar, queue/chat/voice panels,
+  fullscreen, and floating reactions all hold.
+- 🐞 **One bug found + fixed during the pass:** the room header showed a perpetual
+  **WAITING** — it rendered `room.status`, a lifecycle enum nothing transitions —
+  where users expected the headcount. Replaced with a live **"N/capacity watching"**
+  badge fed by the same `room:presence` snapshots PresencePanel receives, bridged
+  through a tiny module pub/sub (`lib/room-presence-store.ts` → `RoomHeadcountBadge`)
+  so the server-rendered header reads the socket-driven count without a second socket
+  or touching the load-bearing sync code in RoomShell. Re-verified live on two devices.
 
 ## Follow-ups / known limits
 
