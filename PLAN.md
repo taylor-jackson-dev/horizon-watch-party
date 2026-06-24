@@ -1,8 +1,8 @@
 # Watch Party — High-Level Architectural Plan
 
-> **Status:** Approved — Ready for Phase 1  
-> **Last Updated:** 2026-05-26  
-> **Phase:** 0 — Planning & Architecture (Complete)
+> **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
+> **Last Updated:** 2026-06-24  
+> **Phase:** 5.1 — Socket reconnect reliability (Complete) · Next: 5.2 design system
 
 ---
 
@@ -278,19 +278,41 @@ watch-party/
 - ✂️ *Avatar reactions* — CUT (deferred).
 - ✂️ *Per-participant local volume slider* — CUT (deferred).
 
-### Phase 5 — View Modes & UI Polish
-- [ ] Theater mode (avatar rail below screen)
-- [ ] Full-screen mode (basic exists from 4.2 — extend to theater + chat overlay)
-- [ ] Split view (video + chat/social panel)
-- [ ] Mobile-responsive / PWA manifest + service worker
-- [ ] Dark cinema theme design system
+### Phase 5 — Sync Reliability, Design & View Modes *(re-scoped 2026-06-24)*
 
-**5.x Candidates (proposed — discuss + approve/cut at phase start)**
-- *Spotlight reactions* — when 3+ people send the same emoji within ~2s, a big animated overlay plays across the screen. Detects a "shared moment." Builds on 4.2 reactions infra; small server-side detector + a CSS keyframe.
-- *Live polls* — host (or any member, configurable) posts a 2-option quick poll. Results pop up over the player, voters animate in. Great for "skip intro?" or "what next?"
-- *Catch-up summary for latecomers* — when a viewer joins mid-session: small modal with "playback at 14:32 · host queued 3 videos · 2 reactions in last minute · chat highlight: …" Helps them slot in without pestering.
-- *Layout overhaul* — the broader style + layout redesign discussed; lives naturally inside the Dark cinema design system work.
-- *Theme variants* — bring `RoomTheme` enum (already in schema) to life with distinct cosmetic skins beyond DARK_CINEMA.
+Friend-test feedback reshaped Phase 5 into a reliability hotfix first, then the
+design/layout work, then view modes, mobile/PWA, invite, and delight. Each
+sub-phase closes with the journal + two-device-verify ritual.
+
+- [x] **5.1** Socket reconnect reliability ✅ (2026-06-24) — re-emit `room:join`
+  on every reconnect, mint a fresh token per attempt (survives the 1h JWT TTL),
+  and reconcile video/chat/queue/presence/step-away on a `syncEpoch` bump. Kills
+  the "refresh fixes it" desync. See `journal/PHASE_5_1_SYNC_RELIABILITY.md`.
+- [ ] **5.2** Dark cinema design system + layout overhaul *(next)* — build the
+  theming *engine* (tokens, primitives, layout shell); premium skins land in
+  Phase 6.
+- [ ] **5.3** View modes — theater rail, split-view toggle, fullscreen chat overlay.
+- [ ] **5.4** Mobile-responsive + PWA (manifest + service worker).
+- [ ] **5.5** Invite link for public rooms (shareable link + copy/native-share).
+- [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers.
+
+**Candidate dispositions (locked at re-scope)**
+- ✅ *Spotlight reactions* — KEPT → 5.6. 3+ same emoji within ~2s triggers a big
+  animated overlay. Builds on 4.2 reactions infra.
+- ✅ *Catch-up summary for latecomers* — KEPT → 5.6. Join-mid-session modal
+  ("playback at 14:32 · 3 queued · chat highlight: …").
+- ✅ *Layout overhaul* — KEPT → folded into 5.2 design system.
+- ✅ *Invite link* — KEPT → 5.5 (chosen "invite link now" over full friends-list).
+- 🔭 *Theme variants / premium skins* — DEFERRED → Phase 6 (build the engine in
+  5.2, ship cosmetic skins as a premium hook later).
+- 🔭 *Live polls* — DEFERRED (post-Phase-5 delight candidate).
+- 🔭 *Local video upload* — DEFERRED ("defer upload"; player is YouTube-only —
+  its own phase later, hooks already in schema/config).
+- 🔭 *Full sync watchdog / diagnostics* — DEFERRED. The durable successor to the
+  5.1 hotfix: error-code taxonomy, periodic reconcile, manual-reconnect UI +
+  infinite retry. (This was the friend's "background service + error codes" idea,
+  scoped down to a hotfix for now.)
+- 🔭 *Full friends-list invite* — DEFERRED → Phase 9 (needs a social graph).
 
 ### Phase 6 — Monetization
 - [ ] Stripe subscription integration (free/premium tiers)
@@ -434,11 +456,19 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 5: View Modes & UI Polish
+## Next Step → Phase 5.2: Dark Cinema Design System + Layout Overhaul
 
-Phases 1–4.4 are shipped. Phase 4.4 delivered display-name edit, presence-based live viewer count, and step-away mode (+ a mobile fullscreen fix); avatar upload and the other profile candidates were cut/deferred. Next active phase is 5 — theater mode, split view, mobile/PWA, dark cinema theme. Candidates (above) to be reviewed and approved/cut before scoping.
+Phases 1–5.1 are shipped. Phase 5.1 fixed the friend-test reconnect desync
+(re-join + per-attempt token mint + `syncEpoch` reconcile) — verified live on two
+devices (2026-06-24). Phase 5 was re-scoped (see the re-scoped Phase 5 section
+above) into 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4 mobile/PWA
+→ 5.5 invite link → 5.6 delight. Next active sub-phase is **5.2**: build the dark
+cinema theming engine (tokens, primitives, layout shell) — premium skins are
+deferred to Phase 6.
 
-Carry-over bugs still open: **B2** voice mic on mobile Safari (`NotAllowedError`), **B3** YouTube black-screen-on-first-load race. The 4.4 live-verification pass on two devices is the immediate to-do before declaring 4.4 fully closed.
+Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
+**B3** (YouTube black-screen-on-first-load) and the reconnect desync are both
+fixed + verified.
 
 ### Already-shipped highlights (1–4.3)
 - Foundation, room system, video sync engine

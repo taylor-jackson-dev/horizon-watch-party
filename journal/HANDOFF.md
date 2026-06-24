@@ -8,11 +8,14 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phase 4.4 (display-name edit + presence-based live count + step-away + mobile
-> fullscreen fix) and the B3 black-screen fix are shipped and verified live on two
-> devices (2026-06-17). Next is Phase 5 (View Modes & UI Polish) — read
-> `journal/HANDOFF.md` and `PLAN.md` → Phase 5 candidates, review with the user,
-> approve/cut, then begin.**
+> Phase 5.1 (socket reconnect reliability — re-join + token re-mint + state
+> reconcile on reconnect, fixing the friend-test "refresh-to-fix" desync) is
+> shipped and verified live on two devices (2026-06-24). Next is Phase 5.2 (Dark
+> cinema design system + layout overhaul) — read `journal/HANDOFF.md`,
+> `journal/PHASE_5_1_SYNC_RELIABILITY.md`, and `PLAN.md` → Phase 5 (re-scoped),
+> then begin. Revised order after 5.2: 5.3 view modes → 5.4 mobile/PWA → 5.5
+> invite link → 5.6 delight. Upload, full sync watchdog, live polls, premium
+> theme skins deferred.**
 
 ---
 
@@ -43,7 +46,12 @@ theater.
   presence-based live count, step-away mode, mobile fullscreen fix. Confirmed on
   two devices (host + viewer). See `journal/PHASE_4_4_PROFILE.md`.
 - ✅ **B3 fixed + verified** (2026-06-17) — YouTube black-screen-on-first-load race.
-- 🔄 **Next: Phase 5** — View Modes & UI Polish
+- ✅ **Phase 5.1 complete + verified live** (2026-06-24) — socket reconnect
+  reliability. Re-emit `room:join` on every reconnect, mint a fresh token per
+  attempt (survives the 1h TTL), and reconcile video/chat/queue/presence/step-away
+  on a `syncEpoch` bump. Kills the friend-test "refresh fixes it" desync.
+  Confirmed on two devices. See `journal/PHASE_5_1_SYNC_RELIABILITY.md`.
+- 🔄 **Next: Phase 5.2** — Dark cinema design system + layout overhaul
 
 ---
 
@@ -67,6 +75,11 @@ theater.
    effect swapped `videoId` — racy, plus the container only mounted when a video
    existed. Restructured to always-mount the container + a single load/cue effect
    gated on a `ready` flag. See `journal/PHASE_4_4_PROFILE.md` follow-up.
+4. ✅ ~~**Reconnect desync ("refresh fixes it")**~~ — FIXED + verified (2026-06-24).
+   Socket.io reconnected the transport but the client never re-emitted `room:join`,
+   so the server stopped delivering room broadcasts to the new socket. Re-join on
+   every connect + per-attempt token mint + `syncEpoch` reconcile. See
+   `journal/PHASE_5_1_SYNC_RELIABILITY.md`.
 
 ---
 
