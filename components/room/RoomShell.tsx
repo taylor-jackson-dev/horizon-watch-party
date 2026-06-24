@@ -11,6 +11,7 @@ import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
 import { VoicePanel } from "./VoicePanel";
 import { PresencePanel } from "./PresencePanel";
+import { MaximizeIcon, MinimizeIcon } from "@/components/ui/icons";
 
 interface RoomShellProps {
   roomId: string;
@@ -500,7 +501,9 @@ export function RoomShell({
         <section className="space-y-2">
           <div
             ref={playerStageRef}
-            className={`wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}`}
+            className={`wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}${
+              fullscreenActive ? "" : " rounded-xl shadow-screen ring-1 ring-border/60"
+            }`}
           >
             <VideoPlayer
               ref={playerRef}
@@ -528,42 +531,20 @@ export function RoomShell({
               title={fullscreenActive ? "Exit fullscreen" : "Fullscreen"}
             >
               {fullscreenActive ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3" />
-                </svg>
+                <MinimizeIcon size={18} />
               ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M4 9V5a2 2 0 0 1 2-2h4M20 9V5a2 2 0 0 0-2-2h-4M4 15v4a2 2 0 0 0 2 2h4M20 15v4a2 2 0 0 1-2 2h-4" />
-                </svg>
+                <MaximizeIcon size={18} />
               )}
             </button>
           </div>
           {currentItem && (
-            <div className="text-sm">
-              <span className="text-brand-muted">Now playing: </span>
-              <span className="font-medium">{currentItem.title}</span>
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+              <span className="font-display text-xs uppercase tracking-wider text-gold">
+                Now playing
+              </span>
+              <span className="font-medium text-text truncate">{currentItem.title}</span>
               {!isHost && (
-                <span className="text-xs text-brand-muted ml-2">
+                <span className="text-xs text-muted">
                   (viewer — audio muted by default; click the unmute icon on the player to enable)
                 </span>
               )}
@@ -583,7 +564,7 @@ export function RoomShell({
         />
       </div>
 
-      <aside className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-4 flex flex-col gap-3 min-h-0">
+      <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col gap-3 min-h-0">
         <PresencePanel
           socket={socket}
           currentUserId={currentUserId}
@@ -623,17 +604,17 @@ function SocketStatusLine({
 }) {
   if (status === "connected") {
     return (
-      <p className="text-xs text-brand-muted">
-        <span className="text-emerald-400">●</span> Connected to sync server
+      <p className="text-xs text-muted">
+        <span className="text-success">●</span> Connected to sync server
       </p>
     );
   }
   if (status === "error") {
-    return <p className="text-xs text-red-400">Sync server error: {error ?? "unknown"}</p>;
+    return <p className="text-xs text-danger">Sync server error: {error ?? "unknown"}</p>;
   }
   return (
-    <p className="text-xs text-brand-muted">
-      <span className="text-yellow-400">●</span> Sync: {status}…
+    <p className="text-xs text-muted">
+      <span className="text-warning">●</span> Sync: {status}…
     </p>
   );
 }

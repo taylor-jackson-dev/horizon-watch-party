@@ -3,6 +3,14 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { QUEUE_MAX_SIZE } from "@/lib/config";
+import { Panel, Badge, Button, Input } from "@/components/ui";
+import {
+  FilmIcon,
+  PlayIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  CloseIcon,
+} from "@/components/ui/icons";
 
 export type QueueItem = {
   id: string;
@@ -107,43 +115,45 @@ export function QueuePanel({
     }
   }
 
-  return (
-    <section className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Queue</h2>
-        <span className="text-xs text-brand-muted">
-          {items.length}/{QUEUE_MAX_SIZE}
-        </span>
-      </div>
+  const atCapacity = items.length >= QUEUE_MAX_SIZE;
 
-      <form onSubmit={onAdd} className="card space-y-2">
-        <input
-          className="input"
+  return (
+    <Panel
+      title="Up next"
+      icon={<FilmIcon size={15} />}
+      action={
+        <Badge tone={atCapacity ? "warning" : "muted"}>
+          {items.length}/{QUEUE_MAX_SIZE}
+        </Badge>
+      }
+      bodyClassName="flex flex-col gap-3"
+    >
+      <form onSubmit={onAdd} className="space-y-2">
+        <Input
           placeholder="Paste a YouTube URL"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           maxLength={500}
           required
         />
-        <input
-          className="input"
+        <Input
           placeholder="Title (optional)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <Button
           type="submit"
-          className="btn-primary w-full"
-          disabled={adding || !url.trim() || items.length >= QUEUE_MAX_SIZE}
+          className="w-full"
+          disabled={adding || !url.trim() || atCapacity}
         >
-          {adding ? "Adding…" : items.length >= QUEUE_MAX_SIZE ? "Queue full" : "Add to queue"}
-        </button>
+          {adding ? "Adding…" : atCapacity ? "Queue full" : "Add to queue"}
+        </Button>
       </form>
 
       {items.length === 0 ? (
-        <p className="text-sm text-brand-muted">
+        <p className="text-sm text-muted">
           Queue is empty. Paste a YouTube URL above to add the first video.
         </p>
       ) : (
@@ -155,15 +165,19 @@ export function QueuePanel({
             return (
               <li
                 key={item.id}
-                className={`card flex gap-3 items-center ${
+                className={`flex gap-3 items-center rounded-xl border p-2 transition-colors ${
                   item.hasPlayed ? "opacity-60" : ""
-                } ${isCurrent ? "ring-2 ring-brand-gold" : ""}`}
+                } ${
+                  isCurrent
+                    ? "border-gold/70 bg-gold/5 ring-1 ring-gold/30"
+                    : "border-border bg-elevated/30"
+                }`}
               >
-                <div className="text-xs text-brand-muted w-5 text-right tabular-nums">
+                <div className="text-xs text-muted w-5 text-right tabular-nums shrink-0">
                   {idx + 1}
                 </div>
                 {item.thumbnailUrl ? (
-                  <div className="relative shrink-0 w-24 h-14 rounded overflow-hidden">
+                  <div className="relative shrink-0 w-24 h-14 rounded-lg overflow-hidden ring-1 ring-border/60">
                     <Image
                       src={item.thumbnailUrl}
                       alt=""
@@ -173,66 +187,74 @@ export function QueuePanel({
                     />
                   </div>
                 ) : (
-                  <div className="shrink-0 w-24 h-14 rounded bg-brand-elevated" />
+                  <div className="shrink-0 w-24 h-14 rounded-lg bg-elevated grid place-items-center">
+                    <FilmIcon size={18} className="text-muted" />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{item.title}</div>
                   {item.url && (
-                    <div className="text-xs text-brand-muted truncate">{item.url}</div>
+                    <div className="text-xs text-muted truncate">{item.url}</div>
                   )}
                   {isCurrent && (
-                    <div className="text-xs text-brand-gold">Now playing</div>
+                    <div className="text-xs text-gold font-medium">Now playing</div>
                   )}
                 </div>
                 {isHost && onSelect && !isCurrent && (
-                  <button
-                    type="button"
-                    className="btn-ghost text-xs"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
                     onClick={() => onSelect(item.id)}
                     disabled={isBusy}
-                    aria-label="Play"
+                    aria-label="Play now"
+                    title="Play now"
                   >
-                    Play
-                  </button>
+                    <PlayIcon size={15} />
+                  </Button>
                 )}
                 {isHost && (
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      className="btn-ghost text-xs px-2 py-0.5 leading-none"
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button
+                      variant="subtle"
+                      size="icon"
+                      className="h-6 w-7"
                       onClick={() => onMove(item, -1)}
                       disabled={isBusy || idx === 0}
                       aria-label="Move up"
                     >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost text-xs px-2 py-0.5 leading-none"
+                      <ChevronUpIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="icon"
+                      className="h-6 w-7"
                       onClick={() => onMove(item, +1)}
                       disabled={isBusy || idx === items.length - 1}
                       aria-label="Move down"
                     >
-                      ↓
-                    </button>
+                      <ChevronDownIcon size={14} />
+                    </Button>
                   </div>
                 )}
                 {canRemove && (
-                  <button
-                    type="button"
-                    className="btn-ghost text-xs"
+                  <Button
+                    variant="subtle"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 hover:text-danger"
                     onClick={() => onRemove(item.id)}
                     disabled={isBusy}
                     aria-label="Remove"
+                    title="Remove"
                   >
-                    Remove
-                  </button>
+                    <CloseIcon size={15} />
+                  </Button>
                 )}
               </li>
             );
           })}
         </ul>
       )}
-    </section>
+    </Panel>
   );
 }

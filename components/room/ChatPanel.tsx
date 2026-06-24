@@ -12,6 +12,8 @@ import {
 import Image from "next/image";
 import type { Socket } from "socket.io-client";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
+import { Panel, Badge, Button } from "@/components/ui";
+import { SendIcon } from "@/components/ui/icons";
 
 export interface ChatMessage {
   id: string;
@@ -211,39 +213,40 @@ export function ChatPanel({
     chatEnabled && !isChatRestricted && !!socket && !sending && input.trim().length > 0;
 
   return (
-    <section className="card flex flex-col h-full min-h-0">
-      <header className="flex items-baseline justify-between border-b border-white/10 pb-2 mb-2">
-        <h2 className="text-lg font-semibold">Chat</h2>
-        {!chatEnabled && (
-          <span className="text-xs text-brand-muted">Disabled by host</span>
-        )}
-        {chatEnabled && isChatRestricted && (
-          <span className="text-xs text-yellow-400">Read-only for you</span>
-        )}
-      </header>
-
+    <Panel
+      title="Chat"
+      icon={<SendIcon size={15} />}
+      action={
+        !chatEnabled ? (
+          <Badge tone="muted">Disabled</Badge>
+        ) : isChatRestricted ? (
+          <Badge tone="default">Read-only</Badge>
+        ) : null
+      }
+      flush
+      className="h-full min-h-0"
+      bodyClassName="flex flex-1 min-h-0 flex-col p-3 gap-2"
+    >
       <div
         ref={listRef}
         className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2"
         aria-live="polite"
       >
         {historyStatus === "loading" && (
-          <p className="text-xs text-brand-muted">Loading messages…</p>
+          <p className="text-xs text-muted">Loading messages…</p>
         )}
         {historyStatus === "error" && (
-          <p className="text-xs text-red-400">{historyError ?? "Failed to load chat"}</p>
+          <p className="text-xs text-danger">{historyError ?? "Failed to load chat"}</p>
         )}
         {historyStatus === "loaded" && messages.length === 0 && (
-          <p className="text-xs text-brand-muted">
-            No messages yet. Say hi 👋
-          </p>
+          <p className="text-xs text-muted">No messages yet. Say hi 👋</p>
         )}
         {messages.map((m) => (
           <MessageRow key={m.id} message={m} isOwn={m.userId === currentUserId} />
         ))}
       </div>
 
-      <form onSubmit={onSubmit} className="mt-2 space-y-1 shrink-0">
+      <form onSubmit={onSubmit} className="space-y-1 shrink-0">
         <textarea
           className="input resize-none"
           rows={2}
@@ -261,18 +264,18 @@ export function ChatPanel({
           disabled={!chatEnabled || isChatRestricted}
         />
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-brand-muted tabular-nums">
+          <span className="text-xs text-muted tabular-nums">
             {input.length}/{MESSAGE_MAX_LENGTH}
           </span>
           {sendError && (
-            <span className="text-xs text-red-400 flex-1 truncate">{sendError}</span>
+            <span className="text-xs text-danger flex-1 truncate">{sendError}</span>
           )}
-          <button type="submit" className="btn-primary text-sm" disabled={!canSend}>
+          <Button type="submit" size="sm" disabled={!canSend}>
             {sending ? "Sending…" : "Send"}
-          </button>
+          </Button>
         </div>
       </form>
-    </section>
+    </Panel>
   );
 }
 
@@ -282,7 +285,7 @@ function MessageRow({ message, isOwn }: { message: ChatMessage; isOwn: boolean }
 
   if (isSystem) {
     return (
-      <div className="text-xs text-center text-brand-muted italic">
+      <div className="text-xs text-center text-muted italic">
         {message.content}
       </div>
     );
@@ -297,16 +300,16 @@ function MessageRow({ message, isOwn }: { message: ChatMessage; isOwn: boolean }
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span
-            className={`font-medium truncate ${isOwn ? "text-brand-gold" : "text-brand-text"}`}
+            className={`font-medium truncate ${isOwn ? "text-gold" : "text-text"}`}
           >
             {message.userDisplayName}
           </span>
-          <span className="text-xs text-brand-muted shrink-0">
+          <span className="text-xs text-muted shrink-0">
             {formatTime(message.createdAt)}
           </span>
         </div>
         {isDeleted ? (
-          <p className="italic text-brand-muted">[deleted]</p>
+          <p className="italic text-muted">[deleted]</p>
         ) : (
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
         )}

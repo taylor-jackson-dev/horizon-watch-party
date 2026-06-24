@@ -189,7 +189,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
             refresh" case. YT replaces this div with its iframe. */}
         <div ref={containerRef} className="w-full h-full" />
         {!videoId && (
-          <div className="absolute inset-0 flex items-center justify-center text-brand-muted text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
             No video selected — add one to the queue to begin.
           </div>
         )}

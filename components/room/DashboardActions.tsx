@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { PlusIcon, UsersIcon } from "@/components/ui/icons";
 
 export function DashboardActions() {
   return (
@@ -44,7 +45,10 @@ function CreateRoomForm() {
 
   return (
     <form onSubmit={onSubmit} className="card space-y-3">
-      <h3 className="font-semibold">Create a room</h3>
+      <h3 className="flex items-center gap-2 font-display uppercase tracking-wide text-text">
+        <PlusIcon size={18} className="text-gold" />
+        Create a room
+      </h3>
       <input
         className="input"
         placeholder="Room name"
@@ -53,7 +57,7 @@ function CreateRoomForm() {
         maxLength={80}
         required
       />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <button type="submit" className="btn-primary w-full" disabled={submitting || !name.trim()}>
         {submitting ? "Creating…" : "Create room"}
       </button>
@@ -94,7 +98,10 @@ function JoinRoomForm() {
 
   return (
     <form onSubmit={onSubmit} className="card space-y-3">
-      <h3 className="font-semibold">Join a room</h3>
+      <h3 className="flex items-center gap-2 font-display uppercase tracking-wide text-text">
+        <UsersIcon size={18} className="text-gold" />
+        Join a room
+      </h3>
       <input
         className="input font-mono"
         placeholder="Join code"
@@ -111,7 +118,7 @@ function JoinRoomForm() {
         onChange={(e) => setPassword(e.target.value)}
         maxLength={64}
       />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <button type="submit" className="btn-primary w-full" disabled={submitting || !code.trim()}>
         {submitting ? "Joining…" : "Join"}
       </button>

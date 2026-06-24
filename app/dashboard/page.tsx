@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { roomPublicSelect } from "@/lib/rooms";
 import { DashboardActions } from "@/components/room/DashboardActions";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card, Badge, buttonVariants } from "@/components/ui";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -27,63 +29,65 @@ export default async function DashboardPage() {
     },
   });
 
-  async function handleSignOut() {
-    "use server";
-    await signOut({ redirectTo: "/" });
-  }
-
   return (
-    <main className="min-h-screen px-4 py-10 max-w-3xl mx-auto space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-brand-gold">Your rooms</h1>
-          <p className="text-sm text-brand-muted">
-            Signed in as {user?.displayName ?? user?.email ?? session.user.email}
-            {session.user.tier === "PREMIUM" && " · Premium"}
+    <AppShell
+      user={{
+        displayName: user?.displayName,
+        email: user?.email,
+        isPremium: session.user.tier === "PREMIUM",
+      }}
+      width="default"
+    >
+      <div className="space-y-8">
+        <header className="space-y-1">
+          <h1 className="font-display text-3xl uppercase tracking-wide text-text">
+            The <span className="text-gold">lobby</span>
+          </h1>
+          <p className="text-sm text-muted">
+            Start a new room or jump back into one you&apos;ve joined.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/settings" className="btn-ghost text-sm">Settings</Link>
-          <form action={handleSignOut}>
-            <button type="submit" className="btn-ghost text-sm">Sign out</button>
-          </form>
-        </div>
-      </header>
+        </header>
 
-      <DashboardActions />
+        <DashboardActions />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Rooms you&apos;ve joined</h2>
-        {memberships.length === 0 ? (
-          <p className="text-sm text-brand-muted">
-            You haven&apos;t joined any rooms yet. Create one above or join with a code.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {memberships.map((m) => (
-              <li key={m.id} className="card flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{m.room.name}</span>
-                    <span className="text-xs text-brand-muted">· {m.role}</span>
-                    {m.status === "LEFT" && (
-                      <span className="text-xs text-brand-muted">· left</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-brand-muted">
-                    Code: <code className="font-mono">{m.room.joinCode}</code>
-                    {" · "}
-                    {m.room.isPrivate ? "Private" : "Public"}
-                  </div>
-                </div>
-                <Link href={`/room/${m.room.joinCode}`} className="btn-ghost text-sm">
-                  Open
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+        <section className="space-y-3">
+          <h2 className="font-display text-sm uppercase tracking-wider text-muted">
+            Your rooms
+          </h2>
+          {memberships.length === 0 ? (
+            <Card className="text-sm text-muted">
+              You haven&apos;t joined any rooms yet. Create one above or join with a code.
+            </Card>
+          ) : (
+            <ul className="space-y-2">
+              {memberships.map((m) => (
+                <li key={m.id}>
+                  <Card className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium text-text">{m.room.name}</span>
+                        <Badge tone={m.role === "HOST" ? "gold" : "muted"}>{m.role}</Badge>
+                        {m.status === "LEFT" && <Badge tone="muted">left</Badge>}
+                      </div>
+                      <div className="text-xs text-muted">
+                        Code: <code className="font-mono text-text">{m.room.joinCode}</code>
+                        {" · "}
+                        {m.room.isPrivate ? "Private" : "Public"}
+                      </div>
+                    </div>
+                    <Link
+                      href={`/room/${m.room.joinCode}`}
+                      className={buttonVariants({ variant: "ghost", size: "sm" })}
+                    >
+                      Open
+                    </Link>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </AppShell>
   );
 }

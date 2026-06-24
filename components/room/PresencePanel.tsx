@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { Socket } from "socket.io-client";
+import { Panel, Badge, Button } from "@/components/ui";
+import { UsersIcon } from "@/components/ui/icons";
 
 interface Viewer {
   userId: string;
@@ -52,15 +54,17 @@ export function PresencePanel({
   const awayCount = presence.viewers.filter((v) => v.away).length;
 
   return (
-    <section className="card flex flex-col gap-2">
-      <header className="flex items-baseline justify-between border-b border-white/10 pb-2">
-        <h2 className="text-lg font-semibold">Watching</h2>
-        <span className="text-xs text-brand-muted">
+    <Panel
+      title="Watching"
+      icon={<UsersIcon size={16} />}
+      action={
+        <Badge tone="muted">
           {presence.count}/{capacity}
           {awayCount > 0 && ` · ${awayCount} away`}
-        </span>
-      </header>
-
+        </Badge>
+      }
+      bodyClassName="flex flex-col gap-2"
+    >
       {presence.viewers.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
           {presence.viewers.map((v) => {
@@ -69,38 +73,37 @@ export function PresencePanel({
               <li key={v.userId} className="flex items-center gap-2 text-sm min-w-0">
                 <span
                   className={`shrink-0 w-2 h-2 rounded-full ${
-                    v.away ? "bg-brand-muted/50" : "bg-emerald-400"
+                    v.away ? "bg-muted/50" : "bg-success"
                   }`}
                   aria-hidden
                 />
                 <span
-                  className={`truncate flex-1 ${v.away ? "text-brand-muted" : ""} ${
-                    isSelf ? "text-brand-gold" : ""
+                  className={`truncate flex-1 ${v.away ? "text-muted" : ""} ${
+                    isSelf ? "text-gold" : ""
                   }`}
                 >
                   {v.displayName}
                   {isSelf && " (you)"}
                 </span>
-                {v.away && (
-                  <span className="text-xs text-brand-muted shrink-0">away</span>
-                )}
+                {v.away && <span className="text-xs text-muted shrink-0">away</span>}
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="text-xs text-brand-muted">Connecting…</p>
+        <p className="text-xs text-muted">Connecting…</p>
       )}
 
       {canStepAway && (
-        <button
-          type="button"
+        <Button
+          variant={isAway ? "primary" : "ghost"}
+          size="sm"
+          className="self-start"
           onClick={onToggleAway}
-          className={`text-sm self-start ${isAway ? "btn-primary" : "btn-ghost"}`}
         >
           {isAway ? "I'm back" : "Step away"}
-        </button>
+        </Button>
       )}
-    </section>
+    </Panel>
   );
 }

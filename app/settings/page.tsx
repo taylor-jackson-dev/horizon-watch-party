@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "@/components/settings/ProfileForm";
+import { AppShell } from "@/components/layout/AppShell";
+import { ArrowLeftIcon } from "@/components/ui/icons";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -15,17 +17,31 @@ export default async function SettingsPage() {
   if (!user) redirect("/signin");
 
   return (
-    <main className="min-h-screen px-4 py-10 max-w-xl mx-auto space-y-6">
-      <Link href="/dashboard" className="text-sm text-brand-muted hover:text-brand-text">
-        ← Back to dashboard
-      </Link>
+    <AppShell
+      user={{
+        displayName: user.displayName,
+        email: user.email,
+        isPremium: session.user.tier === "PREMIUM",
+      }}
+      width="narrow"
+    >
+      <div className="space-y-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text transition-colors"
+        >
+          <ArrowLeftIcon size={16} /> Back to lobby
+        </Link>
 
-      <header>
-        <h1 className="text-3xl font-bold text-brand-gold">Profile</h1>
-        <p className="text-sm text-brand-muted">Customize how you appear to others.</p>
-      </header>
+        <header>
+          <h1 className="font-display text-3xl uppercase tracking-wide text-text">
+            Profile
+          </h1>
+          <p className="text-sm text-muted">Customize how you appear to others.</p>
+        </header>
 
-      <ProfileForm initialDisplayName={user.displayName} email={user.email} />
-    </main>
+        <ProfileForm initialDisplayName={user.displayName} email={user.email} />
+      </div>
+    </AppShell>
   );
 }

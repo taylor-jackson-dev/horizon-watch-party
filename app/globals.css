@@ -2,10 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─────────────────────────────────────────────
-   Base resets & global styles
-───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   THEMING ENGINE — semantic design tokens as CSS custom properties.
+
+   Colors are stored as space-separated RGB channels so Tailwind's
+   `rgb(var(--token) / <alpha-value>)` wiring supports opacity
+   modifiers (e.g. bg-surface/60). Swapping the look in a future
+   version = add a `[data-theme="…"]` block below and point <html>
+   at it; nothing else changes. Premium skins (Phase 6) plug in here.
+
+   Lighting (dim auditorium) is a separate axis: `[data-lighting]`
+   tunes the vignette + ambient glow so a future "house lights"
+   control is a single attribute flip.
+═══════════════════════════════════════════════════════════════ */
 @layer base {
+  /* ── Default theme: Cinema (dim modern movie theater) ─────────── */
+  :root,
+  [data-theme="cinema"] {
+    /* Surfaces — deep auditorium black up through elevated panels */
+    --wp-bg:            12 12 14;     /* #0c0c0e — house black */
+    --wp-surface:       22 22 26;     /* #16161a — card / panel */
+    --wp-elevated:      32 32 38;     /* #202026 — modals, inputs */
+    --wp-overlay:       28 28 34;     /* #1c1c22 — dropdowns/popovers */
+
+    /* Lines */
+    --wp-border:        46 46 54;     /* #2e2e36 — subtle */
+    --wp-border-strong: 70 70 82;     /* #464652 — emphasis */
+
+    /* Accent — cinema gold (the marquee) */
+    --wp-gold:          201 168 76;   /* #c9a84c — primary accent */
+    --wp-gold-bright:   228 198 112;  /* #e4c670 — hover / glow */
+    --wp-gold-dim:      138 111 46;   /* #8a6f2e — secondary */
+    --wp-on-gold:       12 12 14;     /* text on gold surfaces */
+
+    /* Text */
+    --wp-text:          240 240 240;  /* #f0f0f0 — primary */
+    --wp-muted:         150 148 156;  /* #96949c — secondary */
+
+    /* Status */
+    --wp-danger:        229 62 62;    /* #e53e3e */
+    --wp-success:       56 161 105;   /* #38a169 */
+    --wp-warning:       217 160 60;   /* #d9a03c */
+
+    /* Ambient glow color (warm, gold-leaning) for the screen + accents */
+    --wp-glow:          201 168 76;
+
+    /* Typography — fed by next/font variables, with safe fallbacks */
+    --wp-font-sans:    var(--font-sans, "Inter"), system-ui, sans-serif;
+    --wp-font-display: var(--font-display, "Oswald"), var(--font-sans, "Inter"),
+                       system-ui, sans-serif;
+
+    /* Motion + radii */
+    --wp-radius:        0.75rem;
+  }
+
+  /* ── Lighting axis — dim auditorium by default ─────────────────── */
+  [data-lighting="dim"]    { --wp-vignette: 0.62; --wp-ambient: 0.16; }
+  [data-lighting="normal"] { --wp-vignette: 0.32; --wp-ambient: 0.08; }
+  :root                    { --wp-vignette: 0.62; --wp-ambient: 0.16; }
+
   *,
   *::before,
   *::after {
@@ -18,55 +73,78 @@
   }
 
   body {
-    @apply bg-brand-bg text-brand-text antialiased;
-    font-family: "Inter", system-ui, sans-serif;
+    @apply bg-bg text-text antialiased;
+    font-family: var(--wp-font-sans);
+    min-height: 100vh;
+    /* Dim auditorium: a soft warm glow pooled at the top-center fading
+       into a darker vignette at the edges — like house lights down. */
+    background-color: rgb(var(--wp-bg));
+    background-image:
+      radial-gradient(
+        120% 80% at 50% -10%,
+        rgb(var(--wp-glow) / var(--wp-ambient, 0.14)) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        140% 120% at 50% 50%,
+        transparent 35%,
+        rgb(0 0 0 / var(--wp-vignette, 0.6)) 100%
+      );
+    background-attachment: fixed;
   }
 
-  /* Custom scrollbar — dark cinema style */
+  /* Display type — the marquee voice. Condensed + letterspaced. */
+  .font-display {
+    font-family: var(--wp-font-display);
+    letter-spacing: 0.01em;
+  }
+
+  /* Custom scrollbar — dim cinema style */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-brand-surface;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-brand-border rounded-full;
+    @apply bg-border rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-brand-muted;
+    @apply bg-border-strong;
   }
 }
 
-/* ─────────────────────────────────────────────
-   Utility layer — reusable component classes
-───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   Component classes — kept as thin token-driven aliases so legacy
+   markup keeps working while surfaces migrate to <Button>/<Card>.
+═══════════════════════════════════════════════════════════════ */
 @layer components {
-  /* Card surface */
   .card {
-    @apply bg-brand-surface border border-brand-border rounded-xl p-4;
+    @apply bg-surface border border-border rounded-2xl p-4 shadow-panel;
   }
 
-  /* Primary button — gold accent */
   .btn-primary {
-    @apply bg-brand-gold text-brand-bg font-semibold px-4 py-2 rounded-lg
-           hover:bg-brand-gold-dim transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 bg-gold text-on-gold
+           font-semibold px-4 py-2 rounded-xl shadow-glow
+           hover:bg-gold-bright transition-colors duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
   }
 
-  /* Ghost button — outline style */
   .btn-ghost {
-    @apply border border-brand-border text-brand-text px-4 py-2 rounded-lg
-           hover:bg-brand-elevated transition-colors duration-150
+    @apply inline-flex items-center justify-center gap-2 border border-border
+           text-text px-4 py-2 rounded-xl bg-surface/40
+           hover:bg-elevated hover:border-border-strong transition-colors duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* Text input */
   .input {
-    @apply bg-brand-elevated border border-brand-border text-brand-text
-           rounded-lg px-3 py-2 w-full
-           placeholder:text-brand-muted
-           focus:outline-none focus:ring-2 focus:ring-brand-gold
+    @apply bg-elevated border border-border text-text
+           rounded-xl px-3 py-2 w-full
+           placeholder:text-muted
+           focus:outline-none focus:ring-2 focus:ring-gold/70 focus:border-gold/40
            transition-shadow duration-150;
   }
 }
