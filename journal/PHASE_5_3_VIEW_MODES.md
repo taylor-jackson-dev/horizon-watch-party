@@ -1,6 +1,6 @@
 # Phase 5.3 — View Modes (Theater · Focus · Split + Fullscreen Chat Overlay)
 
-**Status:** 🔄 Implemented — static checks green (typecheck · lint · build); **pending live two-device verification.**
+**Status:** ✅ Complete + verified live (2026-06-25) — static checks green (typecheck · lint · build) and confirmed on two devices.
 **Live:** web `https://water-party-private-repo.vercel.app` · socket on Railway (deploys on push to `main`).
 
 ---
@@ -102,18 +102,21 @@ robustly-correct code.
 ## Verification
 - ✅ `npm run typecheck` clean · `npm run lint` clean · `npm run build` clean
   (all 13 routes compiled; `/room/[code]` builds).
-- ⏳ **Live two-device pass pending.** Suggested checklist:
-  - [ ] Stage segmented control switches Theater / Focus / Split; active state reads.
-  - [ ] **Theater** = the familiar layout (rail right, sticky under the top bar).
-  - [ ] **Focus** = stage full-width, no rail; queue still below.
-  - [ ] **Split** = wide chat on the right; queue/presence/voice under the stage.
-  - [ ] Choice **persists** across reload (and is per-browser).
-  - [ ] **Fullscreen** → chat-overlay toggle appears; chat overlays translucent on
+- ✅ **Live two-device pass complete (2026-06-25):**
+  - [x] Stage segmented control switches Theater / Focus / Split; active state reads.
+  - [x] **Theater** = the familiar layout (rail right, sticky under the top bar).
+  - [x] **Focus** = stage full-width, no rail; queue still below.
+  - [x] **Split** = wide chat on the right; queue/presence/voice under the stage.
+  - [x] Choice **persists** across reload (and is per-browser).
+  - [x] **Fullscreen** → chat-overlay toggle appears; chat overlays translucent on
         the video; reaction picker moves to bottom-left; reactions still float.
-  - [ ] Overlay chat **sends + receives** live; rail chat stays in sync.
-  - [ ] Host **and** viewer, on two devices: playback sync, reactions, voice all
+  - [x] Overlay chat **sends + receives** live; rail chat stays in sync.
+  - [x] Host **and** viewer, on two devices: playback sync, reactions, voice all
         unaffected by the layout changes.
-  - [ ] iOS CSS-fullscreen path: overlay shows and is usable.
+  - [x] iOS CSS-fullscreen path: overlay shows and is usable.
+- ✅ **Post-live refinements verified (2026-06-25):** controls relocated off the
+  video onto the **"Now playing" row** so they never cover YouTube's own corner
+  chrome (caught in the live pass); reaction-picker **auto-hide** over the video.
 
 ## Follow-ups / known limits
 - **Focus hides chat entirely** by design; reached via a mode switch or the FS

@@ -8,14 +8,16 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.2 are complete + verified live. Phase 5.2 (dark cinema design system +
-> layout overhaul — CSS-variable theming engine keyed by `data-theme`/`data-lighting`,
-> in-house UI primitives, app shell + real landing, full room restyle) shipped and is
-> confirmed on two devices. Start Phase 5.3 — view modes: theater rail, split-view
-> toggle, fullscreen chat overlay. Read `journal/HANDOFF.md`,
-> `journal/PHASE_5_2_DESIGN_SYSTEM.md`, and `PLAN.md` → Phase 5. Order after 5.3:
-> 5.4 mobile/PWA → 5.5 invite link → 5.6 delight. Upload, full sync watchdog, live
-> polls, premium theme skins deferred.**
+> Phases 1–5.3 are complete + verified live. Phase 5.3 (view modes — theater /
+> focus / split presets persisted per-browser + a fullscreen translucent chat
+> overlay; the view/fullscreen controls live on the "Now playing" row off the video,
+> and the reaction picker auto-hides over the video) shipped and is confirmed on two
+> devices. Start Phase 5.4 — mobile-responsive + PWA (manifest + service worker);
+> give the view modes a mobile-appropriate treatment (today they're `lg+`-only,
+> stacking to one column below `lg`). Read `journal/HANDOFF.md`,
+> `journal/PHASE_5_3_VIEW_MODES.md`, and `PLAN.md` → Phase 5. Order after 5.4:
+> 5.5 invite link → 5.6 delight. Upload, full sync watchdog, live polls, premium
+> theme skins, and the 4th "front-row" cinema view mode (gated on avatars) deferred.**
 
 ---
 
@@ -58,7 +60,16 @@ theater.
   logic untouched. Confirmed on two devices; one bug caught + fixed during the pass —
   the room header showed a perpetual `WAITING` status enum, now a live
   "N/capacity watching" headcount badge. See `journal/PHASE_5_2_DESIGN_SYSTEM.md`.
-- 🔄 **Next: Phase 5.3** — view modes (theater rail, split-view toggle, fullscreen chat overlay)
+- ✅ **Phase 5.3 complete + verified live** (2026-06-25) — view modes: theater /
+  focus / split presets (segmented control, persisted per-browser) + a fullscreen
+  translucent chat overlay. Presentation-only; sync/voice/chat untouched. Polish
+  caught in the live pass: the view/fullscreen controls were covering YouTube's own
+  corner chrome, so they moved off the video onto the "Now playing" row; the reaction
+  picker auto-hides over the video (pure-CSS `group-hover`, pointer devices only —
+  touch keeps it visible). A 4th "front-row" cinema mode (avatars seated front-row)
+  is backlogged, gated on avatar upload. See `journal/PHASE_5_3_VIEW_MODES.md`.
+- 🔄 **Next: Phase 5.4** — mobile-responsive + PWA (manifest + service worker);
+  mobile-appropriate treatment for the view modes.
 
 ---
 

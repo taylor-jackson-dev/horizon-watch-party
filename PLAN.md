@@ -2,7 +2,7 @@
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
 > **Last Updated:** 2026-06-24  
-> **Phase:** 5.3 — View modes (next) · 5.2 design system complete + verified live
+> **Phase:** 5.4 — Mobile/PWA (next) · 5.3 view modes complete + verified live
 
 ---
 
@@ -295,8 +295,13 @@ sub-phase closes with the journal + two-device-verify ritual.
   untouched. One bug caught in the live pass: room header showed a perpetual `WAITING`
   status enum → now a live "N/capacity watching" headcount badge. Premium skins still
   land in Phase 6. See `journal/PHASE_5_2_DESIGN_SYSTEM.md`.
-- [ ] **5.3** View modes — theater rail, split-view toggle, fullscreen chat overlay *(next)*.
-- [ ] **5.4** Mobile-responsive + PWA (manifest + service worker).
+- [x] **5.3** View modes ✅ (2026-06-25, verified live on two devices) — theater
+  rail / focus / split presets (segmented control), persisted per-browser, plus a
+  fullscreen translucent chat overlay. Post-live polish: controls moved off the
+  video onto the "Now playing" row (clears YouTube's corner chrome) + reaction-picker
+  auto-hide. Backlogged a 4th "front-row" cinema mode (gated on avatars). See
+  `journal/PHASE_5_3_VIEW_MODES.md`.
+- [ ] **5.4** Mobile-responsive + PWA (manifest + service worker) *(next)*.
 - [ ] **5.5** Invite link for public rooms (shareable link + copy/native-share).
 - [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers.
 
@@ -462,16 +467,19 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 5.3: View Modes
+## Next Step → Phase 5.4: Mobile-Responsive + PWA
 
-Phases 1–5.2 are shipped + live-verified. **Phase 5.2** (dark cinema design system +
-layout overhaul) is complete and confirmed on two devices; the one bug caught in the
-live pass — a perpetual `WAITING` status enum in the room header — is fixed (live
-"N/capacity watching" headcount badge). The engine is CSS-variable tokens keyed by
-`data-theme`/`data-lighting`, so future color/lighting control + premium skins
-(Phase 6) are additive. Phase 5 order: 5.1 reliability → 5.2 design system →
-**5.3 view modes** (next) → 5.4 mobile/PWA → 5.5 invite link → 5.6 delight. The next
-active sub-phase is **5.3**: theater rail, split-view toggle, fullscreen chat overlay.
+Phases 1–5.3 are shipped + live-verified. **Phase 5.3** (view modes — theater /
+focus / split presets + fullscreen chat overlay) is complete and confirmed on two
+devices. Post-live polish landed off the back of the live pass: the view/fullscreen
+controls moved off the video onto the "Now playing" row (so they never cover
+YouTube's own corner chrome) and the reaction picker auto-hides over the video
+(pure-CSS `group-hover`, gated to pointer devices). A 4th "front-row" cinema view
+mode is backlogged, gated on avatar upload. Phase 5 order: 5.1 reliability →
+5.2 design system → 5.3 view modes → **5.4 mobile/PWA** (next) → 5.5 invite link →
+5.6 delight. The next active sub-phase is **5.4**: mobile-responsive polish (modes
+are an `lg+` concern today — every mode stacks to one column below `lg`; 5.4 gives
+them a mobile-appropriate treatment) + PWA manifest & service worker.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both
