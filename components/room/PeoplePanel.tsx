@@ -211,6 +211,11 @@ export function PeoplePanel({
   );
 }
 
+// A speaking participant gets a green ring around their mic icon — the live
+// "voice is working" cue. Implemented as a ring (box-shadow) so `transition`
+// fades it in/out as LiveKit's active-speaker state flips on and off.
+const SPEAKING_RING = "ring-2 ring-success ring-offset-2 ring-offset-surface";
+
 /**
  * The per-row mic affordance at the far end of a viewer's name.
  * - Not in the voice call → nothing (they're only watching).
@@ -259,10 +264,11 @@ function MicCell({
         aria-label={micOn ? "Mute your mic" : "Turn on your mic"}
         className={cn(
           base,
-          "transition-colors",
+          "transition",
           micOn
             ? "bg-success/20 text-success hover:bg-success/30"
             : "bg-elevated text-muted hover:text-text",
+          micOn && isSpeaking && SPEAKING_RING,
         )}
       >
         {micOn ? <MicIcon size={15} /> : <MicOffIcon size={15} />}
@@ -274,14 +280,16 @@ function MicCell({
     <span
       className={cn(
         base,
+        "transition",
         isSpeaking
           ? "bg-success/20 text-success"
           : micOn
             ? "text-text/70"
             : "text-muted",
+        micOn && isSpeaking && SPEAKING_RING,
       )}
-      title={micOn ? "Mic on" : "Muted"}
-      aria-label={micOn ? "Mic on" : "Muted"}
+      title={isSpeaking ? "Speaking" : micOn ? "Mic on" : "Muted"}
+      aria-label={isSpeaking ? "Speaking" : micOn ? "Mic on" : "Muted"}
     >
       {micOn ? <MicIcon size={15} /> : <MicOffIcon size={15} />}
     </span>

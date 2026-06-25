@@ -153,6 +153,10 @@ into one `Panel title="Watching"`:
   - *you* → a **button** toggling open-mic (`setOpenMicEnabled`), success-tinted when on.
   - *someone else* → read-only indicator; **highlights success while they're speaking**,
     dim when on, muted when off.
+  - **Speaking ring** — anyone actively picking up sound (you included) gets a green
+    ring around their mic icon: the live "voice is working" cue. Driven by LiveKit's
+    active-speaker state (`isSpeaking`, which the hook reads for the local participant
+    too), gated on mic-on, and fades via CSS `transition` as it flips on/off.
 - **Below the roster:** the voice controls — `Join voice chat` (→ `Joining…` /
   `Reconnecting…`), or when connected a short status line + a `Leave` button; voice
   errors surface here. Voice-disabled / view-only show a one-line note instead of a
@@ -194,6 +198,8 @@ stacks above chat like theater. Still one fixed DOM; still pure-CSS mode/tab swi
 - [ ] Tap `Join voice chat` → you join **muted**; your row's mic icon appears (off).
 - [ ] Tap **your** mic icon → you go live (icon turns on); tap again → muted.
 - [ ] Other participants' mic icons reflect their state and **highlight while they talk**.
+- [ ] A green **ring** appears around any mic icon (yours + others') while sound is being
+      picked up and clears when they stop — the "voice is working" cue.
 - [ ] Host-muted member sees a locked off-icon ("Muted by host"), can't toggle.
 - [ ] `Leave` drops the call; `Step away` / `I'm back` still works (viewer only).
 - [ ] **Switching mobile tabs / desktop view modes does NOT drop a joined voice call**
