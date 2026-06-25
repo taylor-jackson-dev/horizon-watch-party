@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOutAction } from "@/app/actions/auth";
 import { buttonVariants } from "@/components/ui";
 import { FilmIcon } from "@/components/ui/icons";
+import { InstallButton } from "@/components/pwa/InstallButton";
 import { UserMenu } from "./UserMenu";
 
 export interface TopBarUser {
@@ -32,6 +33,7 @@ export function TopBar({ user }: TopBarProps) {
         </Link>
 
         <nav className="ml-auto flex items-center gap-2">
+          <InstallButton />
           {user ? (
             <UserMenu
               displayName={user.displayName}

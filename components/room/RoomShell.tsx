@@ -18,7 +18,10 @@ import {
   LayoutFullIcon,
   LayoutSplitIcon,
   ChatBubbleIcon,
+  FilmIcon,
+  UsersIcon,
 } from "@/components/ui/icons";
+import { cn } from "@/lib/cn";
 
 // Room layout presets, surfaced as a segmented control on the player stage.
 //  theater — stage + social rail (default).
@@ -31,6 +34,16 @@ const FSCHAT_STORAGE_KEY = "wp:fschat";
 
 function isViewMode(v: unknown): v is ViewMode {
   return typeof v === "string" && (VIEW_MODES as string[]).includes(v);
+}
+
+// Mobile (<lg) has no room for a side rail, so the three side panels become
+// tabs below the pinned video. Persisted per-browser like the view mode.
+const MOBILE_TABS = ["chat", "queue", "people"] as const;
+type MobileTab = (typeof MOBILE_TABS)[number];
+const MTAB_STORAGE_KEY = "wp:mtab";
+
+function isMobileTab(v: unknown): v is MobileTab {
+  return typeof v === "string" && (MOBILE_TABS as readonly string[]).includes(v);
 }
 
 interface RoomShellProps {
@@ -112,6 +125,9 @@ export function RoomShell({
   // localStorage in a mount effect to avoid a hydration mismatch.
   const [viewMode, setViewMode] = useState<ViewMode>("theater");
   const [fsChatOpen, setFsChatOpen] = useState(true);
+  // Active mobile tab (which side panel shows below the video on <lg). Seeded
+  // to "chat" for a stable first paint; hydrated from localStorage on mount.
+  const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   // Holds a video:state event that we couldn't apply yet — usually because
   // the player is mid-itemSwitch and the new video hasn't cued. Drained by
   // the effect that watches currentItemId below.
@@ -500,6 +516,8 @@ export function RoomShell({
       const v = window.localStorage.getItem(VIEWMODE_STORAGE_KEY);
       if (isViewMode(v)) setViewMode(v);
       if (window.localStorage.getItem(FSCHAT_STORAGE_KEY) === "0") setFsChatOpen(false);
+      const t = window.localStorage.getItem(MTAB_STORAGE_KEY);
+      if (isMobileTab(t)) setMobileTab(t);
     } catch {
       /* private mode / disabled storage — defaults are fine */
     }
@@ -509,6 +527,15 @@ export function RoomShell({
     setViewMode(mode);
     try {
       window.localStorage.setItem(VIEWMODE_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const updateMobileTab = useCallback((tab: MobileTab) => {
+    setMobileTab(tab);
+    try {
+      window.localStorage.setItem(MTAB_STORAGE_KEY, tab);
     } catch {
       /* ignore */
     }
@@ -603,9 +630,24 @@ export function RoomShell({
         ? "lg:grid-cols-1"
         : "lg:grid-cols-[1fr_300px]";
 
+  // Per-mode display classes for the side rail and its panels. The DOM is
+  // fixed — every panel mounts exactly once — and only these CSS classes change
+  // between theater/focus/split, so the singleton VideoPlayer/VoicePanel never
+  // remount on a mode switch. Mobile (<lg) ignores the view mode entirely and
+  // is driven by the tab state instead.
+  const railLgDisplay = viewMode === "focus" ? "lg:hidden" : "lg:flex";
+  const peopleLgClass =
+    viewMode === "focus"
+      ? "lg:hidden"
+      : viewMode === "split"
+        ? "lg:grid lg:grid-cols-2 lg:gap-3"
+        : "lg:flex lg:flex-col lg:gap-3";
+  const chatLgClass =
+    viewMode === "focus" ? "lg:hidden" : "lg:block lg:flex-1 lg:min-h-0 lg:h-auto";
+
   return (
-    <div className={`grid grid-cols-1 gap-6 ${gridColsClass}`}>
-      <div className="space-y-6 min-w-0">
+    <div className={cn("grid grid-cols-1 gap-4 lg:gap-6", gridColsClass)}>
+      <div className="space-y-4 lg:space-y-6 min-w-0">
         <section className="space-y-2">
           <div
             ref={playerStageRef}
@@ -750,35 +792,67 @@ export function RoomShell({
           <SocketStatusLine status={socketStatus} error={socketError} />
         </section>
 
-        {viewMode === "split" ? (
-          // Secondary panels tuck under the stage so the wide chat column
-          // owns the right side.
-          <div className="space-y-4">
-            {queueNode}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {presenceNode}
-              {voiceNode}
-            </div>
+        {/* Mobile tab bar — switches which side panel shows below the pinned
+            video. Hidden on lg (the rail takes over) and in fullscreen. */}
+        {!fullscreenActive && (
+          <div className="lg:hidden grid grid-cols-3 gap-1 rounded-full bg-surface border border-border p-1">
+            <MobileTabButton
+              active={mobileTab === "chat"}
+              onClick={() => updateMobileTab("chat")}
+              icon={<ChatBubbleIcon size={16} />}
+              label="Chat"
+            />
+            <MobileTabButton
+              active={mobileTab === "queue"}
+              onClick={() => updateMobileTab("queue")}
+              icon={<FilmIcon size={16} />}
+              label="Queue"
+            />
+            <MobileTabButton
+              active={mobileTab === "people"}
+              onClick={() => updateMobileTab("people")}
+              icon={<UsersIcon size={16} />}
+              label="People"
+            />
           </div>
-        ) : (
-          queueNode
         )}
+
+        {/* Queue sits in the main column on every desktop mode; on mobile it
+            shows only when its tab is active. */}
+        <div className={cn(mobileTab === "queue" ? "block" : "hidden", "lg:block")}>
+          {queueNode}
+        </div>
       </div>
 
-      {viewMode === "theater" && (
-        <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col gap-3 min-h-0">
+      {/* Side rail — ONE fixed element. On lg its display + inner layout follow
+          the view mode; on mobile it hosts the people/chat tabs. Because every
+          panel is mounted exactly once here, switching modes/tabs is pure CSS —
+          the VideoPlayer iframe and the LiveKit voice call never remount. */}
+      <aside
+        className={cn(
+          "flex flex-col gap-4 min-h-0",
+          "lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:gap-3",
+          railLgDisplay,
+        )}
+      >
+        <div
+          className={cn(
+            mobileTab === "people" ? "flex flex-col gap-4" : "hidden",
+            peopleLgClass,
+          )}
+        >
           {presenceNode}
           {voiceNode}
-          <div className="flex-1 min-h-0 h-[500px] lg:h-auto">{chatNode}</div>
-        </aside>
-      )}
-
-      {viewMode === "split" && (
-        <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 h-[600px] lg:h-auto">{chatNode}</div>
-        </aside>
-      )}
-      {/* focus — no rail; the stage spans the full content width. */}
+        </div>
+        <div
+          className={cn(
+            mobileTab === "chat" ? "block h-[60dvh] min-h-0" : "hidden",
+            chatLgClass,
+          )}
+        >
+          {chatNode}
+        </div>
+      </aside>
     </div>
   );
 }
@@ -832,6 +906,33 @@ function StageModeButton({
       }`}
     >
       {icon}
+    </button>
+  );
+}
+
+function MobileTabButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex items-center justify-center gap-2 h-9 rounded-full text-sm font-medium transition-colors",
+        active ? "bg-gold text-on-gold" : "text-muted hover:text-text hover:bg-elevated",
+      )}
+    >
+      {icon}
+      <span>{label}</span>
     </button>
   );
 }

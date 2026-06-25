@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Watch Party">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="28%" r="62%">
+      <stop offset="0%" stop-color="#c9a84c" stop-opacity="0.30" />
+      <stop offset="55%" stop-color="#c9a84c" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed house-black background (maskable: corners may be cropped by the OS). -->
+  <rect width="512" height="512" fill="#0c0c0e" />
+  <rect width="512" height="512" fill="url(#glow)" />
+
+  <!-- The "screen" + play glyph, kept within the central safe zone. -->
+  <rect x="136" y="146" width="240" height="180" rx="30"
+        fill="none" stroke="#c9a84c" stroke-width="16" />
+  <path d="M232 198 L232 274 L300 236 Z"
+        fill="#e4c670" stroke="#e4c670" stroke-width="14"
+        stroke-linejoin="round" stroke-linecap="round" />
+
+  <!-- Marquee base line. -->
+  <rect x="196" y="356" width="120" height="16" rx="8" fill="#c9a84c" />
+</svg>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline · Watch Party</title>
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #f0f0f0;
+        background-color: #0c0c0e;
+        background-image:
+          radial-gradient(120% 80% at 50% -10%, rgba(201, 168, 76, 0.16) 0%, transparent 55%),
+          radial-gradient(140% 120% at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.62) 100%);
+      }
+      .card { max-width: 380px; text-align: center; }
+      img { width: 72px; height: 72px; margin: 0 auto 20px; display: block; }
+      h1 {
+        font-size: 1.4rem; margin: 0 0 8px;
+        text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+      }
+      .gold { color: #c9a84c; }
+      p { color: #96949c; margin: 0 0 24px; line-height: 1.5; font-size: 0.95rem; }
+      button {
+        font: inherit; font-weight: 600; cursor: pointer;
+        color: #0c0c0e; background: #c9a84c; border: 0;
+        padding: 10px 20px; border-radius: 12px;
+        transition: background 0.15s ease;
+      }
+      button:hover { background: #e4c670; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="/icon-192.png" alt="Watch Party" />
+      <h1>You're <span class="gold">offline</span></h1>
+      <p>
+        Watch Party needs a connection to sync playback, chat, and voice.
+        Reconnect to the internet and try again.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>

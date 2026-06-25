@@ -8,16 +8,15 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.3 are complete + verified live. Phase 5.3 (view modes — theater /
-> focus / split presets persisted per-browser + a fullscreen translucent chat
-> overlay; the view/fullscreen controls live on the "Now playing" row off the video,
-> and the reaction picker auto-hides over the video) shipped and is confirmed on two
-> devices. Start Phase 5.4 — mobile-responsive + PWA (manifest + service worker);
-> give the view modes a mobile-appropriate treatment (today they're `lg+`-only,
-> stacking to one column below `lg`). Read `journal/HANDOFF.md`,
-> `journal/PHASE_5_3_VIEW_MODES.md`, and `PLAN.md` → Phase 5. Order after 5.4:
-> 5.5 invite link → 5.6 delight. Upload, full sync watchdog, live polls, premium
-> theme skins, and the 4th "front-row" cinema view mode (gated on avatars) deferred.**
+> Phases 1–5.3 are complete + verified live. Phase 5.4 (mobile-responsive + PWA) is
+> built and static-green (typecheck · lint · build) and pushed to `main` — it needs a
+> two-device live pass (real phone + desktop) before it's marked complete; run the
+> live checklist in `journal/PHASE_5_4_MOBILE_PWA.md`. If 5.4 already verified, start
+> Phase 5.5 — invite link for public rooms (shareable link + copy/native-share).
+> Read `journal/HANDOFF.md`, `journal/PHASE_5_4_MOBILE_PWA.md`, and `PLAN.md` →
+> Phase 5. Order: 5.5 invite link → 5.6 delight. Upload, full sync watchdog, live
+> polls, premium theme skins, and the 4th "front-row" cinema view mode (gated on
+> avatars) deferred.**
 
 ---
 
@@ -68,8 +67,16 @@ theater.
   picker auto-hides over the video (pure-CSS `group-hover`, pointer devices only —
   touch keeps it visible). A 4th "front-row" cinema mode (avatars seated front-row)
   is backlogged, gated on avatar upload. See `journal/PHASE_5_3_VIEW_MODES.md`.
-- 🔄 **Next: Phase 5.4** — mobile-responsive + PWA (manifest + service worker);
-  mobile-appropriate treatment for the view modes.
+- 🔄 **Phase 5.4 built — static-green, awaiting two-device live verify** (2026-06-25) —
+  PWA (manifest at `/manifest.webmanifest`, conservative service worker, install
+  button, icons, offline page) + a real mobile layout: RoomShell unified into **one
+  fixed DOM** so the singleton VideoPlayer/VoicePanel never remount — desktop
+  theater/focus/split + a mobile **tabbed** layout (Chat · Queue · People under a
+  pinned video) are all pure-CSS now (also kills the latent remount-on-mode-switch
+  bug). Presentation-only. Pushed to `main` for live verification; run the checklist
+  in `journal/PHASE_5_4_MOBILE_PWA.md` before marking complete.
+- 🔄 **Next: Phase 5.5** — invite link for public rooms (shareable link + copy /
+  native-share).
 
 ---
 

@@ -142,6 +142,12 @@ export const MinimizeIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const DownloadIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+  </Svg>
+);
+
 // ── View-mode glyphs (segmented stage control) ──────────────────────
 // Theater: main stage + a docked side rail.
 export const LayoutRailIcon = (p: IconProps) => (
