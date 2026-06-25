@@ -607,47 +607,6 @@ export function RoomShell({
     <div className={`grid grid-cols-1 gap-6 ${gridColsClass}`}>
       <div className="space-y-6 min-w-0">
         <section className="space-y-2">
-          {/* Controls live in a bar ABOVE the player, off the video, so they
-              never cover the embed's own chrome (YouTube puts share/settings
-              in these same corners; other players may differ). View-mode
-              presets are an lg+ concern — every mode collapses to a single
-              column below lg — so they're hidden on mobile, leaving just the
-              fullscreen toggle. In fullscreen this bar is replaced by the
-              in-stage overlay below. */}
-          {!fullscreenActive && (
-            <div className="flex items-center justify-end gap-2">
-              <div className="hidden lg:flex items-center gap-0.5 rounded-full bg-surface border border-border p-1">
-                <StageModeButton
-                  active={viewMode === "theater"}
-                  onClick={() => updateViewMode("theater")}
-                  label="Theater view — stage with side rail"
-                  icon={<LayoutRailIcon size={16} />}
-                />
-                <StageModeButton
-                  active={viewMode === "focus"}
-                  onClick={() => updateViewMode("focus")}
-                  label="Focus view — maximize the screen"
-                  icon={<LayoutFullIcon size={16} />}
-                />
-                <StageModeButton
-                  active={viewMode === "split"}
-                  onClick={() => updateViewMode("split")}
-                  label="Split view — chat beside the screen"
-                  icon={<LayoutSplitIcon size={16} />}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="w-10 h-10 rounded-full bg-surface border border-border text-text flex items-center justify-center hover:bg-elevated hover:border-border-strong transition-colors"
-                aria-label="Enter fullscreen"
-                title="Fullscreen"
-              >
-                <MaximizeIcon size={18} />
-              </button>
-            </div>
-          )}
-
           <div
             ref={playerStageRef}
             className={`group wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}${
@@ -728,6 +687,46 @@ export function RoomShell({
               </div>
             )}
           </div>
+          {/* Controls sit BELOW the player so the video stays flush at the top
+              of the column. Off the video, so they never cover the embed's own
+              corner chrome (YouTube puts share/settings in those corners; other
+              players may differ). View-mode presets are an lg+ concern — every
+              mode collapses to a single column below lg — so they're hidden on
+              mobile, leaving just the fullscreen toggle. Replaced by the
+              in-stage overlay while fullscreen. */}
+          {!fullscreenActive && (
+            <div className="flex items-center justify-end gap-2">
+              <div className="hidden lg:flex items-center gap-0.5 rounded-full bg-surface border border-border p-1">
+                <StageModeButton
+                  active={viewMode === "theater"}
+                  onClick={() => updateViewMode("theater")}
+                  label="Theater view — stage with side rail"
+                  icon={<LayoutRailIcon size={16} />}
+                />
+                <StageModeButton
+                  active={viewMode === "focus"}
+                  onClick={() => updateViewMode("focus")}
+                  label="Focus view — maximize the screen"
+                  icon={<LayoutFullIcon size={16} />}
+                />
+                <StageModeButton
+                  active={viewMode === "split"}
+                  onClick={() => updateViewMode("split")}
+                  label="Split view — chat beside the screen"
+                  icon={<LayoutSplitIcon size={16} />}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="w-10 h-10 rounded-full bg-surface border border-border text-text flex items-center justify-center hover:bg-elevated hover:border-border-strong transition-colors"
+                aria-label="Enter fullscreen"
+                title="Fullscreen"
+              >
+                <MaximizeIcon size={18} />
+              </button>
+            </div>
+          )}
           {currentItem && (
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
               <span className="font-display text-xs uppercase tracking-wider text-gold">

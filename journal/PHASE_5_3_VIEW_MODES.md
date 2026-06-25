@@ -26,12 +26,13 @@ Presentation-only, in the 5.2 spirit: **zero sync / voice / chat logic touched.*
   built once as nodes and slotted into different positions per mode (only one branch
   mounts each on a given render — no duplicate-instance concern).
 
-**Controls bar (above the player) + a fullscreen overlay**
+**Controls bar (below the player) + a fullscreen overlay**
 > Post-live revision: controls were originally an overlay on the stage's top-right.
 > Live testing showed that covered the YouTube embed's own corner chrome
-> (share / settings), so they moved **off the video** into a bar above it.
+> (share / settings), so they moved **off the video** into a bar — placed **below**
+> the player so the video stays flush at the top of the column.
 - **Off the video.** The view-mode presets + enter-fullscreen button sit in a slim,
-  right-aligned bar *above* the player — not floating over it — so they never cover
+  right-aligned bar *below* the player — not floating over it — so they never cover
   any embed's corner buttons (a YouTube-specific collision, but the fix is universal).
 - The presets are **`lg+`-only** (hidden below `lg`, where every mode collapses to a
   single column anyway): **mobile shows just the fullscreen toggle**, since the
