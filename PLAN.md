@@ -1,8 +1,9 @@
 # Watch Party — High-Level Architectural Plan
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
-> **Last Updated:** 2026-06-24  
-> **Phase:** 5.4 — Mobile/PWA (next) · 5.3 view modes complete + verified live
+> **Last Updated:** 2026-06-25  
+> **Phase:** 5.4 mobile/PWA complete + verified · 5.4.1 combined People panel
+> (static-green, awaiting live) · 5.5 invite link (next)
 
 ---
 
@@ -301,14 +302,20 @@ sub-phase closes with the journal + two-device-verify ritual.
   video onto the "Now playing" row (clears YouTube's corner chrome) + reaction-picker
   auto-hide. Backlogged a 4th "front-row" cinema mode (gated on avatars). See
   `journal/PHASE_5_3_VIEW_MODES.md`.
-- [~] **5.4** Mobile-responsive + PWA ✅ static-green (typecheck · lint · build),
-  **awaiting two-device live verify** — PWA (manifest at `/manifest.webmanifest`,
-  conservative service worker, install button, icons, offline page) + a real mobile
-  layout for the room: RoomShell unified into **one fixed DOM** (zero remounts; also
-  kills the latent remount-on-mode-switch bug), with desktop theater/focus/split and
-  a mobile **tabbed** layout (Chat · Queue · People under a pinned video) all driven
-  purely by CSS. Split tweak: presence/voice moved into the rail. Presentation-only.
-  See `journal/PHASE_5_4_MOBILE_PWA.md`.
+- [x] **5.4** Mobile-responsive + PWA ✅ complete + verified live (2026-06-25) — PWA
+  (manifest at `/manifest.webmanifest`, conservative service worker, install button,
+  icons, offline page) + a real mobile layout for the room: RoomShell unified into
+  **one fixed DOM** (zero remounts; also kills the latent remount-on-mode-switch bug),
+  with desktop theater/focus/split and a mobile **tabbed** layout (Chat · Queue ·
+  People under a pinned video) all driven purely by CSS. Split tweak: presence/voice
+  moved into the rail. Presentation-only. See `journal/PHASE_5_4_MOBILE_PWA.md`.
+- [~] **5.4.1** Combined **People panel** ✅ static-green, **awaiting two-device live
+  verify** — merged the "Watching" roster + "Voice" box into one panel: each viewer is
+  one row (presence dot · name · **mic toggle at the far end**), Join-voice button
+  directly below. PTT/open-mic selector removed (deferred to a future voice settings
+  page); default is **open-mic, joined muted** — tap your own mic to talk. Keyed on
+  userId === LiveKit identity. Used everywhere (mobile People tab + desktop rail), so
+  the voice call still mounts once. Presentation-only. See `journal/PHASE_5_4_MOBILE_PWA.md`.
 - [ ] **5.5** Invite link for public rooms (shareable link + copy/native-share) *(next)*.
 - [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers.
 
@@ -476,18 +483,20 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ## Next Step → Phase 5.5: Invite Link
 
-Phases 1–5.3 are shipped + live-verified. **Phase 5.4** (mobile-responsive + PWA) is
+Phases 1–5.4 are shipped + live-verified. **Phase 5.4.1** (combined People panel) is
 **built and static-green** (typecheck · lint · build) and **awaiting two-device live
 verification** — once confirmed on a real phone + desktop it's marked complete. It
-delivered the PWA (manifest, conservative service worker, install button, icons,
-offline page) and a real mobile layout: RoomShell was unified into **one fixed DOM**
-so the singleton `VideoPlayer`/`VoicePanel` never remount — desktop theater/focus/split
-and a mobile **tabbed** layout (Chat · Queue · People under a pinned video) are now all
-pure-CSS, which also fixed the latent remount-on-mode-switch bug. See
-`journal/PHASE_5_4_MOBILE_PWA.md`. Phase 5 order: 5.1 reliability → 5.2 design system
-→ 5.3 view modes → 5.4 mobile/PWA → **5.5 invite link** (next) → 5.6 delight. The next
-active sub-phase is **5.5**: a shareable invite link for public rooms (copy + native
-share), so joining doesn't require typing a code.
+merged the room's "Watching" roster and "Voice" box into **one clean People panel**:
+each viewer is a single row (presence dot · name · a **mic toggle at the far end**),
+with the Join-voice button directly below. The push-to-talk / open-mic selector was
+removed (deferred to a future voice settings page); the default is now **open-mic,
+joined muted** — you tap your own mic to start talking. The merge is keyed on
+userId === LiveKit identity and used everywhere (mobile People tab + desktop rail), so
+the voice call still mounts exactly once. See `journal/PHASE_5_4_MOBILE_PWA.md`. Phase 5
+order: 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1
+People panel → **5.5 invite link** (next) → 5.6 delight. The next active sub-phase is
+**5.5**: a shareable invite link for public rooms (copy + native share), so joining
+doesn't require typing a code.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both

@@ -9,8 +9,7 @@ import { QueuePanel, type QueueItem } from "./QueuePanel";
 import { ChatPanel } from "./ChatPanel";
 import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
-import { VoicePanel } from "./VoicePanel";
-import { PresencePanel } from "./PresencePanel";
+import { PeoplePanel } from "./PeoplePanel";
 import {
   MaximizeIcon,
   MinimizeIcon,
@@ -579,23 +578,21 @@ export function RoomShell({
 
   const fullscreenActive = isFullscreen || cssFullscreen;
 
-  // Panels rendered once and slotted differently per view mode. Only one
-  // branch of the layout below mounts each on a given render, so there's no
-  // duplicate-instance concern.
-  const presenceNode = (
-    <PresencePanel
+  // Panels rendered once and slotted differently per view mode. Each mounts
+  // exactly once in the fixed DOM below, so a layout switch is pure CSS and
+  // never remounts the singleton VideoPlayer or the LiveKit voice call (which
+  // now lives inside PeoplePanel). PeoplePanel is the combined watch-roster +
+  // voice surface: presence list with a per-row mic toggle, join button below.
+  const peopleNode = (
+    <PeoplePanel
       socket={socket}
+      roomId={roomId}
       currentUserId={currentUserId}
       initialCount={initialActiveCount}
       capacity={capacity}
       canStepAway={!isHost}
       isAway={isAway}
       onToggleAway={handleToggleAway}
-    />
-  );
-  const voiceNode = (
-    <VoicePanel
-      roomId={roomId}
       voiceEnabled={voiceEnabled}
       isMicMuted={isMicMuted}
       isViewOnly={isViewOnly}
@@ -632,16 +629,14 @@ export function RoomShell({
 
   // Per-mode display classes for the side rail and its panels. The DOM is
   // fixed — every panel mounts exactly once — and only these CSS classes change
-  // between theater/focus/split, so the singleton VideoPlayer/VoicePanel never
-  // remount on a mode switch. Mobile (<lg) ignores the view mode entirely and
-  // is driven by the tab state instead.
+  // between theater/focus/split, so the singleton VideoPlayer and voice call
+  // never remount on a mode switch. Mobile (<lg) ignores the view mode entirely
+  // and is driven by the tab state instead.
   const railLgDisplay = viewMode === "focus" ? "lg:hidden" : "lg:flex";
+  // People is one combined panel now (presence + voice), so split no longer
+  // needs the side-by-side 2-col split — it stacks above chat like theater.
   const peopleLgClass =
-    viewMode === "focus"
-      ? "lg:hidden"
-      : viewMode === "split"
-        ? "lg:grid lg:grid-cols-2 lg:gap-3"
-        : "lg:flex lg:flex-col lg:gap-3";
+    viewMode === "focus" ? "lg:hidden" : "lg:flex lg:flex-col lg:gap-3";
   const chatLgClass =
     viewMode === "focus" ? "lg:hidden" : "lg:block lg:flex-1 lg:min-h-0 lg:h-auto";
 
@@ -837,12 +832,11 @@ export function RoomShell({
       >
         <div
           className={cn(
-            mobileTab === "people" ? "flex flex-col gap-4" : "hidden",
+            mobileTab === "people" ? "block" : "hidden",
             peopleLgClass,
           )}
         >
-          {presenceNode}
-          {voiceNode}
+          {peopleNode}
         </div>
         <div
           className={cn(

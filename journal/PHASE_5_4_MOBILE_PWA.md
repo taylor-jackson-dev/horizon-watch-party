@@ -1,6 +1,7 @@
 # Phase 5.4 — Mobile-Responsive + PWA (Manifest · Service Worker · Install)
 
-**Status:** 🔄 Static checks green (typecheck · lint · build) — **awaiting two-device live verification.** Not marked complete until confirmed on a real phone + desktop vs. the deployed app.
+**Status:** ✅ Complete + verified live (2026-06-25) — static checks green (typecheck · lint · build) and confirmed on a real phone + desktop ("Everything checks out").
+**Follow-up:** §5.4.1 below — combined People panel (presentation-only), 🔄 static-green, awaiting its own two-device live pass.
 **Live:** web `https://water-party-private-repo.vercel.app` · socket on Railway (deploys on push to `main`).
 
 ---
@@ -103,3 +104,108 @@ needed** beyond RoomShell — the room's view modes were the only real mobile ga
   cosmetic, negligible.
 - Service worker is intentionally minimal (no offline app shell, no push). Revisit if
   we want true offline browsing or notifications.
+
+---
+
+# Phase 5.4.1 — Combined "People" Panel (Watching + Voice in one)
+
+**Status:** 🔄 Static checks green (typecheck · lint · build) — **awaiting two-device live verification.** Presentation-only follow-up to 5.4.
+**Live:** same as above (deploys on push to `main`).
+
+## Goal
+Host feedback after the 5.4 mobile pass: under the mobile **People** tab the
+"Watching" box and the "Voice" box were two stacked panels. Merge them into **one
+clean interface** — every viewer is a single row with a **mic icon at the far end
+(opposite the name)** that toggles the mic on/off — and move the **Join voice chat**
+button **directly below** the roster. The push-to-talk / open-mic mode selector
+becomes a **future voice settings** concern, not an in-room control.
+
+## Decisions locked (via question prompt)
+- **Scope = everywhere.** The one combined panel is used in **both** the mobile People
+  tab **and** the desktop side rail — not a mobile-only variant. This keeps the 5.4
+  one-fixed-DOM invariant intact: the LiveKit voice call (`useVoiceRoom`) still mounts
+  **exactly once**, so layout/tab switches never drop the call.
+- **Mic default = open-mic, joined muted.** You join voice silent; tap your own mic
+  icon to start talking (and again to mute). No PTT in the room UI for now.
+
+## The merge — how presence and voice line up
+Two independent sources, joined by id:
+- **Presence** (socket `room:presence`) is the **master roster** — who's in the room,
+  display name, away flag, headcount. This drives the rows.
+- **Voice** (`useVoiceRoom` → LiveKit participants) supplies per-person mic + speaking
+  state, but **only once you've joined** (LiveKit only reports the call roster to a
+  connected client).
+
+They join cleanly because **LiveKit identity === Watch Party userId**
+(`lib/livekit.ts` sets `identity: userId`). PeoplePanel builds
+`voiceById = new Map(participants.map(p => [p.identity, p]))` and each roster row looks
+up its live voice state in O(1). A viewer who's in the room but not on the call simply
+has no voice entry → **no mic cell** (they're "just watching").
+
+## What was built
+**New `components/room/PeoplePanel.tsx`** — folds the old PresencePanel + VoicePanel
+into one `Panel title="Watching"`:
+- **Roster rows:** presence dot (success / muted-when-away) · truncated name (gold +
+  "(you)" for self) · `away` tag · **`MicCell` at the far right**.
+- **`MicCell`** (per-row mic affordance), four states:
+  - *not on the call* → renders nothing.
+  - *you, muted by host* → a locked, non-interactive danger off-icon ("Muted by host").
+  - *you* → a **button** toggling open-mic (`setOpenMicEnabled`), success-tinted when on.
+  - *someone else* → read-only indicator; **highlights success while they're speaking**,
+    dim when on, muted when off.
+- **Below the roster:** the voice controls — `Join voice chat` (→ `Joining…` /
+  `Reconnecting…`), or when connected a short status line + a `Leave` button; voice
+  errors surface here. Voice-disabled / view-only show a one-line note instead of a
+  button. Then the viewer-only **Step away / I'm back** toggle.
+- Kept `publishRoomPresenceCount(snapshot.count)` on every presence event — the
+  RoomHeadcountBadge in the room header subscribes to it.
+
+**`lib/use-voice-room.ts`** — default `mode` flipped `"ptt"` → `"open"` (join muted,
+`openMicEnabled` stays `false`). **All PTT machinery kept** (keyboard handler, on-screen
+press/release, `pttKeyLabel`) — it early-returns while `mode !== "ptt"`, ready to re-arm
+from a future voice settings page.
+
+**`components/room/RoomShell.tsx`** — `presenceNode` + `voiceNode` replaced by one
+`peopleNode = <PeoplePanel … />` (now also takes `roomId`, `voiceEnabled`, `isMicMuted`,
+`isViewOnly`). The people slot in the rail renders the single node; `peopleLgClass`
+simplified — **split** no longer needs the side-by-side 2-col (one panel now), so it
+stacks above chat like theater. Still one fixed DOM; still pure-CSS mode/tab switches.
+
+**Deleted:** `components/room/PresencePanel.tsx` · `components/room/VoicePanel.tsx`
+(only RoomShell referenced them).
+
+## Files touched
+**New:** `components/room/PeoplePanel.tsx`
+**Modified:** `components/room/RoomShell.tsx` · `lib/use-voice-room.ts` · `PLAN.md` ·
+`journal/PHASE_5_4_MOBILE_PWA.md` · `journal/HANDOFF.md`
+**Deleted:** `components/room/PresencePanel.tsx` · `components/room/VoicePanel.tsx`
+
+## Verification
+- ✅ `npm run typecheck` clean · `npm run lint` clean · `npm run build` clean
+  (all 14 routes; `/room/[code]` builds).
+- ⚠️ Room UI can't be exercised locally (needs authed session + socket + DB), so
+  behavior is verified by build/type/lint + reasoning, then live. **Two-device live
+  verification is the gate.**
+
+### Live checklist (real phone + desktop)
+- [ ] People panel shows ONE box: roster with a mic icon at the right of each name.
+- [ ] Before joining voice: no mic icons (you can't see the call roster yet); the
+      `Join voice chat` button sits directly below the roster.
+- [ ] Tap `Join voice chat` → you join **muted**; your row's mic icon appears (off).
+- [ ] Tap **your** mic icon → you go live (icon turns on); tap again → muted.
+- [ ] Other participants' mic icons reflect their state and **highlight while they talk**.
+- [ ] Host-muted member sees a locked off-icon ("Muted by host"), can't toggle.
+- [ ] `Leave` drops the call; `Step away` / `I'm back` still works (viewer only).
+- [ ] **Switching mobile tabs / desktop view modes does NOT drop a joined voice call**
+      (the panel — and the voice hook — mounts once everywhere).
+- [ ] Desktop rail (theater + split) shows the same one combined panel above chat.
+- [ ] Voice-disabled room and view-only member each show the right note, no button.
+
+## Follow-ups / known limits
+- **PTT / open-mic selector now lives nowhere in-room** — intentionally deferred to a
+  future **voice settings page**. The hook still supports both modes.
+- **B2 — voice mic on mobile Safari** (`NotAllowedError`) still open; even more central
+  now that the mic toggle is the primary voice control. Needs a real permission flow.
+- Pre-join we can't show who else is already on the call (LiveKit only reports the
+  roster to a connected client). Acceptable; a socket-level voice presence would be a
+  larger change.

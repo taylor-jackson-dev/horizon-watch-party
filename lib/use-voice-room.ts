@@ -77,7 +77,11 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function useVoiceRoom(roomId: string) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<VoiceMode>("ptt");
+  // Default to open-mic, joined muted: you join silent and tap your own mic to
+  // start talking (PeoplePanel's per-row mic toggle drives `openMicEnabled`).
+  // Push-to-talk machinery below is kept intact for a future voice settings
+  // page; flipping `mode` to "ptt" re-arms the keyboard handler.
+  const [mode, setMode] = useState<VoiceMode>("open");
   const [openMicEnabled, setOpenMicEnabled] = useState(false);
   const [pttActive, setPttActive] = useState(false);
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
