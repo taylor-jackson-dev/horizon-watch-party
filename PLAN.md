@@ -457,6 +457,7 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 - *Local volume mixer overlay* — extends per-participant volume into a small mixer panel.
 - *Voice effects* — robot voice, pitch shift, etc. for the soundboard. Fun, possibly cursed.
 - *Webcam reactions* — tiny self-view bubble. Privacy minefield; design carefully if pursued.
+- *Room banner frames* — the lobby / viewers' room list shows a host-chosen **banner frame** per room, set in the (future) room-settings page after creation. Ships first as a **basic banner set**, then grows into **achievement-unlockable**, **custom**, and **premium** banners — ties into Phase 6 monetization and a future achievements system. Slot in when the room-settings page or the lobby/room-list gets its next pass (host note, 2026-06-24; not yet scheduled).
 
 ---
 

@@ -14,6 +14,7 @@ import type { Socket } from "socket.io-client";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
 import { Panel, Badge, Button } from "@/components/ui";
 import { SendIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/cn";
 
 export interface ChatMessage {
   id: string;
@@ -37,6 +38,10 @@ interface ChatPanelProps {
   isChatRestricted: boolean;
   /** Bumps on every socket (re)join; epoch ≥ 2 triggers a gap-healing refetch. */
   syncEpoch: number;
+  /** Drop the marquee header + status badges (used by the fullscreen overlay). */
+  compact?: boolean;
+  /** Extra classes for the underlying panel — e.g. translucency in the overlay. */
+  panelClassName?: string;
 }
 
 // If the user is within this many pixels of the bottom of the scroll
@@ -52,6 +57,8 @@ export function ChatPanel({
   chatEnabled,
   isChatRestricted,
   syncEpoch,
+  compact = false,
+  panelClassName,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyStatus, setHistoryStatus] = useState<"idle" | "loading" | "loaded" | "error">(
@@ -214,17 +221,17 @@ export function ChatPanel({
 
   return (
     <Panel
-      title="Chat"
-      icon={<SendIcon size={15} />}
+      title={compact ? undefined : "Chat"}
+      icon={compact ? undefined : <SendIcon size={15} />}
       action={
-        !chatEnabled ? (
+        compact ? undefined : !chatEnabled ? (
           <Badge tone="muted">Disabled</Badge>
         ) : isChatRestricted ? (
           <Badge tone="default">Read-only</Badge>
         ) : null
       }
       flush
-      className="h-full min-h-0"
+      className={cn("h-full min-h-0", panelClassName)}
       bodyClassName="flex flex-1 min-h-0 flex-col p-3 gap-2"
     >
       <div

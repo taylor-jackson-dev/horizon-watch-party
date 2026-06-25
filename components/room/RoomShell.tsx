@@ -11,7 +11,27 @@ import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
 import { VoicePanel } from "./VoicePanel";
 import { PresencePanel } from "./PresencePanel";
-import { MaximizeIcon, MinimizeIcon } from "@/components/ui/icons";
+import {
+  MaximizeIcon,
+  MinimizeIcon,
+  LayoutRailIcon,
+  LayoutFullIcon,
+  LayoutSplitIcon,
+  ChatBubbleIcon,
+} from "@/components/ui/icons";
+
+// Room layout presets, surfaced as a segmented control on the player stage.
+//  theater — stage + social rail (default).
+//  focus   — rail hidden, stage maximized ("lights down").
+//  split   — stage + enlarged chat side-by-side; secondary panels tuck below.
+type ViewMode = "theater" | "focus" | "split";
+const VIEW_MODES: ViewMode[] = ["theater", "focus", "split"];
+const VIEWMODE_STORAGE_KEY = "wp:viewmode";
+const FSCHAT_STORAGE_KEY = "wp:fschat";
+
+function isViewMode(v: unknown): v is ViewMode {
+  return typeof v === "string" && (VIEW_MODES as string[]).includes(v);
+}
 
 interface RoomShellProps {
   roomId: string;
@@ -87,6 +107,11 @@ export function RoomShell({
   // fullscreens <video>, never a <div>). When native FS is unavailable we pin
   // the stage to the viewport via CSS instead so the button still works.
   const [cssFullscreen, setCssFullscreen] = useState(false);
+  // View-mode preset + fullscreen-chat-overlay visibility. Both seed to their
+  // defaults for a stable first paint (SSR-safe), then hydrate from
+  // localStorage in a mount effect to avoid a hydration mismatch.
+  const [viewMode, setViewMode] = useState<ViewMode>("theater");
+  const [fsChatOpen, setFsChatOpen] = useState(true);
   // Holds a video:state event that we couldn't apply yet — usually because
   // the player is mid-itemSwitch and the new video hasn't cued. Drained by
   // the effect that watches currentItemId below.
@@ -469,6 +494,38 @@ export function RoomShell({
     }
   }, [cssFullscreen]);
 
+  // Hydrate the persisted view-mode + overlay prefs once on mount.
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(VIEWMODE_STORAGE_KEY);
+      if (isViewMode(v)) setViewMode(v);
+      if (window.localStorage.getItem(FSCHAT_STORAGE_KEY) === "0") setFsChatOpen(false);
+    } catch {
+      /* private mode / disabled storage — defaults are fine */
+    }
+  }, []);
+
+  const updateViewMode = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem(VIEWMODE_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleFsChat = useCallback(() => {
+    setFsChatOpen((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(FSCHAT_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
   // Host: select a different queue item
   const handleSelect = useCallback(
     (id: string) => {
@@ -495,8 +552,59 @@ export function RoomShell({
 
   const fullscreenActive = isFullscreen || cssFullscreen;
 
+  // Panels rendered once and slotted differently per view mode. Only one
+  // branch of the layout below mounts each on a given render, so there's no
+  // duplicate-instance concern.
+  const presenceNode = (
+    <PresencePanel
+      socket={socket}
+      currentUserId={currentUserId}
+      initialCount={initialActiveCount}
+      capacity={capacity}
+      canStepAway={!isHost}
+      isAway={isAway}
+      onToggleAway={handleToggleAway}
+    />
+  );
+  const voiceNode = (
+    <VoicePanel
+      roomId={roomId}
+      voiceEnabled={voiceEnabled}
+      isMicMuted={isMicMuted}
+      isViewOnly={isViewOnly}
+    />
+  );
+  const queueNode = (
+    <QueuePanel
+      roomId={roomId}
+      items={items}
+      currentItemId={currentItemId}
+      currentUserId={currentUserId}
+      isHost={isHost}
+      onChanged={handleQueueMutation}
+      onSelect={handleSelect}
+    />
+  );
+  const chatNode = (
+    <ChatPanel
+      roomId={roomId}
+      socket={socket}
+      currentUserId={currentUserId}
+      chatEnabled={chatEnabled}
+      isChatRestricted={isChatRestricted}
+      syncEpoch={syncEpoch}
+    />
+  );
+
+  const gridColsClass =
+    viewMode === "split"
+      ? "lg:grid-cols-[1fr_minmax(340px,420px)]"
+      : viewMode === "focus"
+        ? "lg:grid-cols-1"
+        : "lg:grid-cols-[1fr_300px]";
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+    <div className={`grid grid-cols-1 gap-6 ${gridColsClass}`}>
       <div className="space-y-6 min-w-0">
         <section className="space-y-2">
           <div
@@ -522,20 +630,83 @@ export function RoomShell({
               roomId={roomId}
               socket={socket}
               reactionsEnabled={reactionsEnabled}
+              align={fullscreenActive && fsChatOpen ? "left" : "right"}
             />
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="pointer-events-auto absolute bottom-3 right-14 w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
-              aria-label={fullscreenActive ? "Exit fullscreen" : "Enter fullscreen"}
-              title={fullscreenActive ? "Exit fullscreen" : "Fullscreen"}
-            >
-              {fullscreenActive ? (
-                <MinimizeIcon size={18} />
-              ) : (
-                <MaximizeIcon size={18} />
+            {/* Stage controls — top-right so they clear YouTube's bottom bar
+                and the bottom-right reaction picker. The wrapper is
+                pointer-events-none; only the buttons capture clicks. */}
+            <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-2">
+              {!fullscreenActive && (
+                <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-black/70 backdrop-blur-sm p-1 shadow-lg">
+                  <StageModeButton
+                    active={viewMode === "theater"}
+                    onClick={() => updateViewMode("theater")}
+                    label="Theater view — stage with side rail"
+                    icon={<LayoutRailIcon size={16} />}
+                  />
+                  <StageModeButton
+                    active={viewMode === "focus"}
+                    onClick={() => updateViewMode("focus")}
+                    label="Focus view — maximize the screen"
+                    icon={<LayoutFullIcon size={16} />}
+                  />
+                  <StageModeButton
+                    active={viewMode === "split"}
+                    onClick={() => updateViewMode("split")}
+                    label="Split view — chat beside the screen"
+                    icon={<LayoutSplitIcon size={16} />}
+                  />
+                </div>
               )}
-            </button>
+              {fullscreenActive && (
+                <button
+                  type="button"
+                  onClick={toggleFsChat}
+                  aria-pressed={fsChatOpen}
+                  className={`pointer-events-auto w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center shadow-lg transition-colors ${
+                    fsChatOpen
+                      ? "bg-gold text-on-gold hover:bg-gold-bright"
+                      : "bg-black/70 text-white hover:bg-black/85"
+                  }`}
+                  aria-label={fsChatOpen ? "Hide chat overlay" : "Show chat overlay"}
+                  title={fsChatOpen ? "Hide chat" : "Show chat"}
+                >
+                  <ChatBubbleIcon size={18} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="pointer-events-auto w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
+                aria-label={fullscreenActive ? "Exit fullscreen" : "Enter fullscreen"}
+                title={fullscreenActive ? "Exit fullscreen" : "Fullscreen"}
+              >
+                {fullscreenActive ? (
+                  <MinimizeIcon size={18} />
+                ) : (
+                  <MaximizeIcon size={18} />
+                )}
+              </button>
+            </div>
+
+            {/* Fullscreen chat overlay — a second, translucent ChatPanel that
+                lives INSIDE the stage element so it's visible while the stage
+                is fullscreen (native FS only renders the stage subtree). Docked
+                below the control row so the buttons stay tappable. */}
+            {fullscreenActive && fsChatOpen && (
+              <div className="pointer-events-auto absolute top-16 right-2 bottom-2 z-10 w-[340px] max-w-[80%]">
+                <ChatPanel
+                  roomId={roomId}
+                  socket={socket}
+                  currentUserId={currentUserId}
+                  chatEnabled={chatEnabled}
+                  isChatRestricted={isChatRestricted}
+                  syncEpoch={syncEpoch}
+                  compact
+                  panelClassName="bg-black/45 backdrop-blur-md border-white/10 shadow-2xl"
+                />
+              </div>
+            )}
           </div>
           {currentItem && (
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
@@ -553,44 +724,35 @@ export function RoomShell({
           <SocketStatusLine status={socketStatus} error={socketError} />
         </section>
 
-        <QueuePanel
-          roomId={roomId}
-          items={items}
-          currentItemId={currentItemId}
-          currentUserId={currentUserId}
-          isHost={isHost}
-          onChanged={handleQueueMutation}
-          onSelect={handleSelect}
-        />
+        {viewMode === "split" ? (
+          // Secondary panels tuck under the stage so the wide chat column
+          // owns the right side.
+          <div className="space-y-4">
+            {queueNode}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {presenceNode}
+              {voiceNode}
+            </div>
+          </div>
+        ) : (
+          queueNode
+        )}
       </div>
 
-      <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col gap-3 min-h-0">
-        <PresencePanel
-          socket={socket}
-          currentUserId={currentUserId}
-          initialCount={initialActiveCount}
-          capacity={capacity}
-          canStepAway={!isHost}
-          isAway={isAway}
-          onToggleAway={handleToggleAway}
-        />
-        <VoicePanel
-          roomId={roomId}
-          voiceEnabled={voiceEnabled}
-          isMicMuted={isMicMuted}
-          isViewOnly={isViewOnly}
-        />
-        <div className="flex-1 min-h-0 h-[500px] lg:h-auto">
-          <ChatPanel
-            roomId={roomId}
-            socket={socket}
-            currentUserId={currentUserId}
-            chatEnabled={chatEnabled}
-            isChatRestricted={isChatRestricted}
-            syncEpoch={syncEpoch}
-          />
-        </div>
-      </aside>
+      {viewMode === "theater" && (
+        <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col gap-3 min-h-0">
+          {presenceNode}
+          {voiceNode}
+          <div className="flex-1 min-h-0 h-[500px] lg:h-auto">{chatNode}</div>
+        </aside>
+      )}
+
+      {viewMode === "split" && (
+        <aside className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 h-[600px] lg:h-auto">{chatNode}</div>
+        </aside>
+      )}
+      {/* focus — no rail; the stage spans the full content width. */}
     </div>
   );
 }
@@ -616,5 +778,34 @@ function SocketStatusLine({
     <p className="text-xs text-muted">
       <span className="text-warning">●</span> Sync: {status}…
     </p>
+  );
+}
+
+function StageModeButton({
+  active,
+  onClick,
+  label,
+  icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+        active
+          ? "bg-gold text-on-gold"
+          : "text-white/80 hover:text-white hover:bg-white/10"
+      }`}
+    >
+      {icon}
+    </button>
   );
 }

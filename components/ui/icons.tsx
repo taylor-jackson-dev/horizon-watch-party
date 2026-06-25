@@ -141,3 +141,34 @@ export const MinimizeIcon = (p: IconProps) => (
     <path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3" />
   </Svg>
 );
+
+// ── View-mode glyphs (segmented stage control) ──────────────────────
+// Theater: main stage + a docked side rail.
+export const LayoutRailIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </Svg>
+);
+
+// Focus: a single maximized stage (lights down).
+export const LayoutFullIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+  </Svg>
+);
+
+// Split: stage + chat sharing the width evenly.
+export const LayoutSplitIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M12 4v16" />
+  </Svg>
+);
+
+// Speech bubble — fullscreen chat-overlay toggle.
+export const ChatBubbleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5Z" />
+  </Svg>
+);

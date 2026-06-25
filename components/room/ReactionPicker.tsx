@@ -8,6 +8,9 @@ interface ReactionPickerProps {
   roomId: string;
   socket: Socket | null;
   reactionsEnabled: boolean;
+  /** Which bottom corner to dock to. Defaults to "right"; switch to "left"
+   *  when a right-docked fullscreen chat overlay would otherwise cover it. */
+  align?: "left" | "right";
 }
 
 // How long a transient error message lingers before clearing.
@@ -17,6 +20,7 @@ export function ReactionPicker({
   roomId,
   socket,
   reactionsEnabled,
+  align = "right",
 }: ReactionPickerProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +83,9 @@ export function ReactionPicker({
   return (
     <div
       ref={wrapperRef}
-      className="pointer-events-auto absolute bottom-3 right-3 flex flex-col items-end gap-2"
+      className={`pointer-events-auto absolute bottom-3 flex flex-col gap-2 ${
+        align === "left" ? "left-3 items-start" : "right-3 items-end"
+      }`}
     >
       {error && (
         <div className="text-xs bg-black/70 text-white px-2 py-1 rounded-md shadow-md">
