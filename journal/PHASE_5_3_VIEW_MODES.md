@@ -26,24 +26,27 @@ Presentation-only, in the 5.2 spirit: **zero sync / voice / chat logic touched.*
   built once as nodes and slotted into different positions per mode (only one branch
   mounts each on a given render — no duplicate-instance concern).
 
-**Stage toolbar (top-right of the player stage)**
-- Relocated from bottom-right → **top-right** so it clears YouTube's own bottom
-  control bar *and* the bottom-right reaction picker.
-- Not fullscreen: a segmented **Theater / Focus / Split** control (gold = active).
-- Fullscreen: a **chat-overlay toggle** (speech bubble) + the fullscreen button.
-- Wrapper is `pointer-events-none`; only the buttons capture clicks, so dead space
-  over the video stays clickable for YouTube.
-- **Auto-hide (post-live polish):** the control cluster *and* the reaction picker
-  fade out when idle and reappear on stage hover or keyboard focus — a YouTube-style
-  "controls fade away" feel. Done in **pure CSS** (`group-hover` + `focus-within`),
-  not a JS idle timer, because the player is a **cross-origin iframe**: JS
-  pointer/mousemove events don't fire on the parent while the cursor is over the
-  video, but CSS `:hover` *does* propagate to the iframe's ancestors. Gated behind
-  `@media (hover: hover)` so **touch devices keep the controls permanently visible**
-  (no hover to reveal them → no regression; mobile is 5.4). The reaction picker stays
-  put whenever its menu is **open** or an **error** toast is showing. Known limit: in
-  fullscreen the stage fills the viewport so `:hover` is always true → controls don't
-  fade there (acceptable — you still need the FS chat + exit buttons reachable).
+**Controls bar (above the player) + a fullscreen overlay**
+> Post-live revision: controls were originally an overlay on the stage's top-right.
+> Live testing showed that covered the YouTube embed's own corner chrome
+> (share / settings), so they moved **off the video** into a bar above it.
+- **Off the video.** The view-mode presets + enter-fullscreen button sit in a slim,
+  right-aligned bar *above* the player — not floating over it — so they never cover
+  any embed's corner buttons (a YouTube-specific collision, but the fix is universal).
+- The presets are **`lg+`-only** (hidden below `lg`, where every mode collapses to a
+  single column anyway): **mobile shows just the fullscreen toggle**, since the
+  presets do nothing there.
+- Fullscreen: a small **in-stage overlay** (top-right) — a **chat-overlay toggle**
+  (speech bubble) + the exit-fullscreen button. These must live *inside* the stage
+  because native fullscreen renders only the stage subtree.
+- **Reaction-picker auto-hide.** The one control still over the video — the reaction
+  FAB — fades out when idle and reappears on stage hover / keyboard focus (a
+  YouTube-style "controls fade away"). Done in **pure CSS** (`group-hover` +
+  `focus-within`), not a JS idle timer, because the player is a **cross-origin
+  iframe**: JS mouse events don't fire on the parent over the video, but CSS `:hover`
+  *does* propagate to the iframe's ancestors. Gated behind `@media (hover: hover)` so
+  **touch keeps it visible** (no hover to reveal it). Stays put while its menu is
+  **open** or an **error** is showing.
 
 **The three layouts**
 - **Theater** (default) — stage + queue (left) · sticky social rail

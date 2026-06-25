@@ -607,6 +607,47 @@ export function RoomShell({
     <div className={`grid grid-cols-1 gap-6 ${gridColsClass}`}>
       <div className="space-y-6 min-w-0">
         <section className="space-y-2">
+          {/* Controls live in a bar ABOVE the player, off the video, so they
+              never cover the embed's own chrome (YouTube puts share/settings
+              in these same corners; other players may differ). View-mode
+              presets are an lg+ concern — every mode collapses to a single
+              column below lg — so they're hidden on mobile, leaving just the
+              fullscreen toggle. In fullscreen this bar is replaced by the
+              in-stage overlay below. */}
+          {!fullscreenActive && (
+            <div className="flex items-center justify-end gap-2">
+              <div className="hidden lg:flex items-center gap-0.5 rounded-full bg-surface border border-border p-1">
+                <StageModeButton
+                  active={viewMode === "theater"}
+                  onClick={() => updateViewMode("theater")}
+                  label="Theater view — stage with side rail"
+                  icon={<LayoutRailIcon size={16} />}
+                />
+                <StageModeButton
+                  active={viewMode === "focus"}
+                  onClick={() => updateViewMode("focus")}
+                  label="Focus view — maximize the screen"
+                  icon={<LayoutFullIcon size={16} />}
+                />
+                <StageModeButton
+                  active={viewMode === "split"}
+                  onClick={() => updateViewMode("split")}
+                  label="Split view — chat beside the screen"
+                  icon={<LayoutSplitIcon size={16} />}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="w-10 h-10 rounded-full bg-surface border border-border text-text flex items-center justify-center hover:bg-elevated hover:border-border-strong transition-colors"
+                aria-label="Enter fullscreen"
+                title="Fullscreen"
+              >
+                <MaximizeIcon size={18} />
+              </button>
+            </div>
+          )}
+
           <div
             ref={playerStageRef}
             className={`group wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}${
@@ -633,38 +674,15 @@ export function RoomShell({
               align={fullscreenActive && fsChatOpen ? "left" : "right"}
               autoHide
             />
-            {/* Stage controls — top-right so they clear YouTube's bottom bar
-                and the bottom-right reaction picker. The wrapper is
-                pointer-events-none; only the buttons capture clicks.
-                Auto-hide: on pointer devices the cluster fades out and only
-                reappears on stage hover (CSS :hover propagates over the
-                cross-origin iframe, where JS mouse events don't) or keyboard
-                focus. Gated behind @media(hover:hover) so touch devices —
-                which have no hover — keep the controls permanently visible. */}
-            <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-2 transition-opacity duration-300 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
-              {!fullscreenActive && (
-                <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-black/70 backdrop-blur-sm p-1 shadow-lg">
-                  <StageModeButton
-                    active={viewMode === "theater"}
-                    onClick={() => updateViewMode("theater")}
-                    label="Theater view — stage with side rail"
-                    icon={<LayoutRailIcon size={16} />}
-                  />
-                  <StageModeButton
-                    active={viewMode === "focus"}
-                    onClick={() => updateViewMode("focus")}
-                    label="Focus view — maximize the screen"
-                    icon={<LayoutFullIcon size={16} />}
-                  />
-                  <StageModeButton
-                    active={viewMode === "split"}
-                    onClick={() => updateViewMode("split")}
-                    label="Split view — chat beside the screen"
-                    icon={<LayoutSplitIcon size={16} />}
-                  />
-                </div>
-              )}
-              {fullscreenActive && (
+            {/* Fullscreen-only controls — chat toggle + exit. These must live
+                INSIDE the stage because native fullscreen renders only the
+                stage subtree. No hover-fade here: in fullscreen the stage
+                fills the viewport so :hover is always true and a fade couldn't
+                hide them anyway. Wrapper is pointer-events-none; only the
+                buttons capture clicks. The view-mode presets + enter-fullscreen
+                button live in the bar ABOVE the player, off the video. */}
+            {fullscreenActive && (
+              <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={toggleFsChat}
@@ -679,21 +697,17 @@ export function RoomShell({
                 >
                   <ChatBubbleIcon size={18} />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="pointer-events-auto w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
-                aria-label={fullscreenActive ? "Exit fullscreen" : "Enter fullscreen"}
-                title={fullscreenActive ? "Exit fullscreen" : "Fullscreen"}
-              >
-                {fullscreenActive ? (
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="pointer-events-auto w-10 h-10 rounded-full bg-black/70 backdrop-blur-sm text-white flex items-center justify-center shadow-lg hover:bg-black/85 transition-colors"
+                  aria-label="Exit fullscreen"
+                  title="Exit fullscreen"
+                >
                   <MinimizeIcon size={18} />
-                ) : (
-                  <MaximizeIcon size={18} />
-                )}
-              </button>
-            </div>
+                </button>
+              </div>
+            )}
 
             {/* Fullscreen chat overlay — a second, translucent ChatPanel that
                 lives INSIDE the stage element so it's visible while the stage
@@ -808,7 +822,7 @@ function StageModeButton({
       className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
         active
           ? "bg-gold text-on-gold"
-          : "text-white/80 hover:text-white hover:bg-white/10"
+          : "text-muted hover:text-text hover:bg-elevated"
       }`}
     >
       {icon}
