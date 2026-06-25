@@ -687,56 +687,63 @@ export function RoomShell({
               </div>
             )}
           </div>
-          {/* Controls sit BELOW the player so the video stays flush at the top
-              of the column. Off the video, so they never cover the embed's own
-              corner chrome (YouTube puts share/settings in those corners; other
-              players may differ). View-mode presets are an lg+ concern — every
-              mode collapses to a single column below lg — so they're hidden on
-              mobile, leaving just the fullscreen toggle. Replaced by the
-              in-stage overlay while fullscreen. */}
-          {!fullscreenActive && (
-            <div className="flex items-center justify-end gap-2">
-              <div className="hidden lg:flex items-center gap-0.5 rounded-full bg-surface border border-border p-1">
-                <StageModeButton
-                  active={viewMode === "theater"}
-                  onClick={() => updateViewMode("theater")}
-                  label="Theater view — stage with side rail"
-                  icon={<LayoutRailIcon size={16} />}
-                />
-                <StageModeButton
-                  active={viewMode === "focus"}
-                  onClick={() => updateViewMode("focus")}
-                  label="Focus view — maximize the screen"
-                  icon={<LayoutFullIcon size={16} />}
-                />
-                <StageModeButton
-                  active={viewMode === "split"}
-                  onClick={() => updateViewMode("split")}
-                  label="Split view — chat beside the screen"
-                  icon={<LayoutSplitIcon size={16} />}
-                />
+          {/* The "Now playing" caption and the view controls share one tight
+              row below the player — caption left, controls right. Kept OFF the
+              video so they never cover the embed's own corner chrome (YouTube
+              puts share/settings there; other players may differ). View-mode
+              presets are an lg+ concern — every mode collapses to a single
+              column below lg — so they're hidden on mobile, leaving just the
+              fullscreen toggle. Controls drop out in fullscreen (the in-stage
+              overlay takes over). */}
+          {(currentItem || !fullscreenActive) && (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+                {currentItem && (
+                  <>
+                    <span className="font-display text-xs uppercase tracking-wider text-gold">
+                      Now playing
+                    </span>
+                    <span className="font-medium text-text truncate">{currentItem.title}</span>
+                    {!isHost && (
+                      <span className="text-xs text-muted">
+                        (viewer — audio muted by default; click the unmute icon on the player to enable)
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="w-10 h-10 rounded-full bg-surface border border-border text-text flex items-center justify-center hover:bg-elevated hover:border-border-strong transition-colors"
-                aria-label="Enter fullscreen"
-                title="Fullscreen"
-              >
-                <MaximizeIcon size={18} />
-              </button>
-            </div>
-          )}
-          {currentItem && (
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-              <span className="font-display text-xs uppercase tracking-wider text-gold">
-                Now playing
-              </span>
-              <span className="font-medium text-text truncate">{currentItem.title}</span>
-              {!isHost && (
-                <span className="text-xs text-muted">
-                  (viewer — audio muted by default; click the unmute icon on the player to enable)
-                </span>
+              {!fullscreenActive && (
+                <div className="shrink-0 flex items-center gap-2">
+                  <div className="hidden lg:flex items-center gap-0.5 rounded-full bg-surface border border-border p-1">
+                    <StageModeButton
+                      active={viewMode === "theater"}
+                      onClick={() => updateViewMode("theater")}
+                      label="Theater view — stage with side rail"
+                      icon={<LayoutRailIcon size={16} />}
+                    />
+                    <StageModeButton
+                      active={viewMode === "focus"}
+                      onClick={() => updateViewMode("focus")}
+                      label="Focus view — maximize the screen"
+                      icon={<LayoutFullIcon size={16} />}
+                    />
+                    <StageModeButton
+                      active={viewMode === "split"}
+                      onClick={() => updateViewMode("split")}
+                      label="Split view — chat beside the screen"
+                      icon={<LayoutSplitIcon size={16} />}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="w-10 h-10 rounded-full bg-surface border border-border text-text flex items-center justify-center hover:bg-elevated hover:border-border-strong transition-colors"
+                    aria-label="Enter fullscreen"
+                    title="Fullscreen"
+                  >
+                    <MaximizeIcon size={18} />
+                  </button>
+                </div>
               )}
             </div>
           )}

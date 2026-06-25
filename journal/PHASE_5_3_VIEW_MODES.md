@@ -29,11 +29,13 @@ Presentation-only, in the 5.2 spirit: **zero sync / voice / chat logic touched.*
 **Controls bar (below the player) + a fullscreen overlay**
 > Post-live revision: controls were originally an overlay on the stage's top-right.
 > Live testing showed that covered the YouTube embed's own corner chrome
-> (share / settings), so they moved **off the video** into a bar — placed **below**
-> the player so the video stays flush at the top of the column.
-- **Off the video.** The view-mode presets + enter-fullscreen button sit in a slim,
-  right-aligned bar *below* the player — not floating over it — so they never cover
-  any embed's corner buttons (a YouTube-specific collision, but the fix is universal).
+> (share / settings), so they moved **off the video** — and now **share the
+> "Now playing" caption row** below the player, so the video stays flush at the top
+> of the column and the row below stays tight.
+- **Off the video.** The view-mode presets + enter-fullscreen button sit on the right
+  of the **"Now playing" caption row** below the player (caption left, controls
+  right) — not floating over the video — so they never cover any embed's corner
+  buttons (a YouTube-specific collision, but the fix is universal).
 - The presets are **`lg+`-only** (hidden below `lg`, where every mode collapses to a
   single column anyway): **mobile shows just the fullscreen toggle**, since the
   presets do nothing there.
