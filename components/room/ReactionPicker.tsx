@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { ALLOWED_REACTION_EMOJIS } from "@/lib/validations/reactions";
+import { cn } from "@/lib/cn";
 
 interface ReactionPickerProps {
   roomId: string;
@@ -11,6 +12,11 @@ interface ReactionPickerProps {
   /** Which bottom corner to dock to. Defaults to "right"; switch to "left"
    *  when a right-docked fullscreen chat overlay would otherwise cover it. */
   align?: "left" | "right";
+  /** Fade the toggle out when idle, revealing it on stage hover / focus — same
+   *  behavior as the stage controls. Stays put while the menu is open or an
+   *  error is showing. Only fades on pointer devices (@media hover:hover); on
+   *  touch it remains visible. */
+  autoHide?: boolean;
 }
 
 // How long a transient error message lingers before clearing.
@@ -21,6 +27,7 @@ export function ReactionPicker({
   socket,
   reactionsEnabled,
   align = "right",
+  autoHide = false,
 }: ReactionPickerProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +90,14 @@ export function ReactionPicker({
   return (
     <div
       ref={wrapperRef}
-      className={`pointer-events-auto absolute bottom-3 flex flex-col gap-2 ${
-        align === "left" ? "left-3 items-start" : "right-3 items-end"
-      }`}
+      className={cn(
+        "pointer-events-auto absolute bottom-3 flex flex-col gap-2 transition-opacity duration-300",
+        align === "left" ? "left-3 items-start" : "right-3 items-end",
+        autoHide &&
+          !open &&
+          !error &&
+          "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100",
+      )}
     >
       {error && (
         <div className="text-xs bg-black/70 text-white px-2 py-1 rounded-md shadow-md">

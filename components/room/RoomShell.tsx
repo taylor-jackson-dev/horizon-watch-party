@@ -609,7 +609,7 @@ export function RoomShell({
         <section className="space-y-2">
           <div
             ref={playerStageRef}
-            className={`wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}${
+            className={`group wp-player-stage relative${cssFullscreen ? " wp-fs-css" : ""}${
               fullscreenActive ? "" : " rounded-xl shadow-screen ring-1 ring-border/60"
             }`}
           >
@@ -631,11 +631,17 @@ export function RoomShell({
               socket={socket}
               reactionsEnabled={reactionsEnabled}
               align={fullscreenActive && fsChatOpen ? "left" : "right"}
+              autoHide
             />
             {/* Stage controls — top-right so they clear YouTube's bottom bar
                 and the bottom-right reaction picker. The wrapper is
-                pointer-events-none; only the buttons capture clicks. */}
-            <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-2">
+                pointer-events-none; only the buttons capture clicks.
+                Auto-hide: on pointer devices the cluster fades out and only
+                reappears on stage hover (CSS :hover propagates over the
+                cross-origin iframe, where JS mouse events don't) or keyboard
+                focus. Gated behind @media(hover:hover) so touch devices —
+                which have no hover — keep the controls permanently visible. */}
+            <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-2 transition-opacity duration-300 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
               {!fullscreenActive && (
                 <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-black/70 backdrop-blur-sm p-1 shadow-lg">
                   <StageModeButton

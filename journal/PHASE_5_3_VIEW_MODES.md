@@ -33,6 +33,17 @@ Presentation-only, in the 5.2 spirit: **zero sync / voice / chat logic touched.*
 - Fullscreen: a **chat-overlay toggle** (speech bubble) + the fullscreen button.
 - Wrapper is `pointer-events-none`; only the buttons capture clicks, so dead space
   over the video stays clickable for YouTube.
+- **Auto-hide (post-live polish):** the control cluster *and* the reaction picker
+  fade out when idle and reappear on stage hover or keyboard focus — a YouTube-style
+  "controls fade away" feel. Done in **pure CSS** (`group-hover` + `focus-within`),
+  not a JS idle timer, because the player is a **cross-origin iframe**: JS
+  pointer/mousemove events don't fire on the parent while the cursor is over the
+  video, but CSS `:hover` *does* propagate to the iframe's ancestors. Gated behind
+  `@media (hover: hover)` so **touch devices keep the controls permanently visible**
+  (no hover to reveal them → no regression; mobile is 5.4). The reaction picker stays
+  put whenever its menu is **open** or an **error** toast is showing. Known limit: in
+  fullscreen the stage fills the viewport so `:hover` is always true → controls don't
+  fade there (acceptable — you still need the FS chat + exit buttons reachable).
 
 **The three layouts**
 - **Theater** (default) — stage + queue (left) · sticky social rail
@@ -54,7 +65,9 @@ Presentation-only, in the 5.2 spirit: **zero sync / voice / chat logic touched.*
 ## Primitive changes (all presentation-only, backward-compatible defaults)
 - `components/ui/icons.tsx` — `LayoutRailIcon`, `LayoutFullIcon`, `LayoutSplitIcon`,
   `ChatBubbleIcon`.
-- `ReactionPicker` — `align?: "left" | "right"` (default `"right"`).
+- `ReactionPicker` — `align?: "left" | "right"` (default `"right"`) and
+  `autoHide?: boolean` (default `false`) — fades the toggle when idle, on hover
+  devices only; pinned while its menu is open or an error shows.
 - `ChatPanel` — `compact?` (drops the marquee header + status badges) and
   `panelClassName?` (forwarded to `Panel` for the overlay's translucency).
 
@@ -78,7 +91,7 @@ robustly-correct code.
 **New:** `journal/PHASE_5_3_VIEW_MODES.md`
 **Modified:** `components/room/RoomShell.tsx` · `components/room/ChatPanel.tsx` ·
 `components/room/ReactionPicker.tsx` · `components/ui/icons.tsx` · `PLAN.md`
-(backlog capture — room banner frames)
+(backlog capture — room banner frames + "front-row" cinema view mode)
 
 ## Verification
 - ✅ `npm run typecheck` clean · `npm run lint` clean · `npm run build` clean
@@ -102,4 +115,10 @@ robustly-correct code.
 - Two `ChatPanel` instances coexist while fullscreen (rail one hidden, overlay one
   shown) — see rationale above.
 - **Mobile polish = 5.4.** Split's under-stage panels can get tall on phones; the
-  responsive pass will address stacking + a mobile-appropriate mode control.
+  responsive pass will address stacking + a mobile-appropriate mode control. Also
+  revisit auto-hide on touch (currently controls stay always-visible there).
+- **Planned 4th view mode — "Front-row" cinema** (backlogged in `PLAN.md`): members
+  rendered as avatars seated front-row in silhouette under a big-screen stage.
+  **Gated on avatars existing** (deferred avatar upload). Slots into the `ViewMode`
+  union + `gridColsClass`/layout switch already here; pairs with spotlight reactions
+  (5.6) and premium seat cosmetics (Phase 6). Host request, 2026-06-24.
