@@ -8,16 +8,20 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.4.1 are complete + verified live. Phase 5.4.1 (combined "People" panel —
-> watching roster + voice merged into one box, per-row mic toggle, join button below;
-> default open-mic/joined-muted; speaking ring around the mic icon) passed its
-> two-device live pass on 2026-06-25. Start Phase 5.5 — invite link for public rooms
-> (shareable link + copy/native-share). Read `journal/HANDOFF.md`,
-> `journal/PHASE_5_4_MOBILE_PWA.md`, and `PLAN.md` → Phase 5. Order: 5.5 invite link →
-> 5.6 delight. Deferred: voice settings page + voice-quality work (mic monitoring,
-> background-noise suppression, snappier remote speaking rings — see PLAN backlog),
-> avatar upload, full sync watchdog, live polls, premium theme skins, and the 4th
-> "front-row" cinema view mode (gated on avatars).**
+> Phases 1–5.4.1 are complete + verified live. Phase 5.5 (invite link) is BUILT +
+> static-green and DEPLOYED — awaiting its two-device live verify. The invite link is
+> the room URL (`/room/<code>`), with a copy/native-share button in the room header +
+> on each dashboard card; opening a PUBLIC link auto-joins you (join fires client-side
+> on mount, so Next.js `<Link>` prefetch can't silently enroll a hovering user); PRIVATE
+> links land on a password card; it reuses `/api/rooms/join` (no new route, no
+> migration). FIRST: run the live checklist in `journal/PHASE_5_5_INVITE_LINK.md` on two
+> devices/accounts; if green, mark 5.5 verified, then start Phase 5.6 — delight
+> (spotlight reactions + catch-up summary for latecomers). Read `journal/HANDOFF.md`,
+> `journal/PHASE_5_5_INVITE_LINK.md`, and `PLAN.md` → Phase 5. Deferred: voice settings
+> page + voice-quality work (mic monitoring, background-noise suppression, snappier
+> remote speaking rings — see PLAN backlog), avatar upload, full sync watchdog, live
+> polls, premium theme skins, and the 4th "front-row" cinema view mode (gated on
+> avatars).**
 
 ---
 
@@ -86,8 +90,12 @@ theater.
   userId === LiveKit identity; used everywhere (mobile People tab + desktop rail) so the
   voice call still mounts once. PresencePanel + VoicePanel deleted. Confirmed two-device
   ("Looks good on both ends"). See `journal/PHASE_5_4_MOBILE_PWA.md` §5.4.1.
-- 🔄 **Next: Phase 5.5** — invite link for public rooms (shareable link + copy /
-  native-share).
+- 🔄 **Phase 5.5 — invite link** (built + static-green, **awaiting two-device live
+  verify**) — invite link = the room URL (`/room/<code>`); copy/native-share button in
+  the room header + on each dashboard card; **public** links auto-join (client-side
+  join-on-mount, prefetch-safe), **private** links prompt for the password; reuses
+  `/api/rooms/join` (no new route, no migration). See `journal/PHASE_5_5_INVITE_LINK.md`.
+- 🔄 **Next: Phase 5.6** — delight (spotlight reactions + catch-up summary for latecomers).
 
 ---
 

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { isHostRole, roomPublicSelect } from "@/lib/rooms";
 import { RoomShell } from "@/components/room/RoomShell";
 import { RoomHeadcountBadge } from "@/components/room/RoomHeadcountBadge";
+import { JoinGate } from "@/components/room/JoinGate";
+import { InviteShareButton } from "@/components/room/InviteShareButton";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, Badge } from "@/components/ui";
 import { ArrowLeftIcon } from "@/components/ui/icons";
@@ -41,6 +43,8 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
   if (!room) notFound();
   const membership = room.members[0];
   const isMember = membership && membership.status !== "BANNED";
+  const isBanned = membership?.status === "BANNED";
+  const isEnded = Boolean(room.closedAt) || room.status === "ENDED";
   const isHost = isMember && !forceViewer ? isHostRole(membership.role) : false;
   const isChatRestricted = membership?.isChatRestricted ?? false;
   const isMicMuted = membership?.isMicMuted ?? false;
@@ -102,6 +106,7 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
               {room.isPrivate ? "Private" : "Public"}
             </Badge>
             <RoomHeadcountBadge initialCount={room._count.members} capacity={room.capacity} />
+            {isMember && <InviteShareButton joinCode={room.joinCode} roomName={room.name} />}
           </div>
         </header>
 
@@ -126,13 +131,20 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
             initialActiveCount={room._count.members}
             capacity={room.capacity}
           />
-        ) : (
-          <Card>
+        ) : isBanned ? (
+          <Card className="space-y-1">
+            <p className="text-text">You can&apos;t join this room.</p>
             <p className="text-sm text-muted">
-              You are not a member of this room. Use the join form on the dashboard with code{" "}
-              <code className="font-mono text-text">{room.joinCode}</code>.
+              Your access to <span className="text-text">{room.name}</span> has been revoked.
             </p>
           </Card>
+        ) : (
+          <JoinGate
+            joinCode={room.joinCode}
+            roomName={room.name}
+            isPrivate={room.isPrivate}
+            isEnded={isEnded}
+          />
         )}
       </div>
     </AppShell>

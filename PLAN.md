@@ -1,9 +1,9 @@
 # Watch Party — High-Level Architectural Plan
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
-> **Last Updated:** 2026-06-25  
-> **Phase:** 5.4 mobile/PWA + 5.4.1 combined People panel complete + verified ·
-> 5.5 invite link (next)
+> **Last Updated:** 2026-06-26  
+> **Phase:** 5.4.1 People panel complete + verified · 5.5 invite link static-green,
+> awaiting two-device live verify
 
 ---
 
@@ -316,8 +316,14 @@ sub-phase closes with the journal + two-device-verify ritual.
   page); default is **open-mic, joined muted** — tap your own mic to talk. Keyed on
   userId === LiveKit identity. Used everywhere (mobile People tab + desktop rail), so
   the voice call still mounts once. Presentation-only. See `journal/PHASE_5_4_MOBILE_PWA.md`.
-- [ ] **5.5** Invite link for public rooms (shareable link + copy/native-share) *(next)*.
-- [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers.
+- [~] **5.5** Invite link ✅ static-green, **awaiting two-device live verify** — the
+  invite link is just the room URL (`/room/<code>`), with a copy/native-share button in
+  the room header **and** on each dashboard room card. Opening a **public** link
+  **auto-joins** and drops you straight in — the join fires **client-side on mount**
+  (not during server render) so Next.js `<Link>` prefetch can't silently enroll you;
+  **private** links land on a password card. Reuses `/api/rooms/join` (no new route, no
+  migration). See `journal/PHASE_5_5_INVITE_LINK.md`.
+- [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers *(next)*.
 
 **Candidate dispositions (locked at re-scope)**
 - ✅ *Spotlight reactions* — KEPT → 5.6. 3+ same emoji within ~2s triggers a big
@@ -482,25 +488,21 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 5.5: Invite Link
+## Next Step → Phase 5.6: Delight
 
-Phases 1–5.4.1 are shipped + live-verified. **Phase 5.4.1** (combined People panel)
-is **complete + verified live** (two devices, 2026-06-25). It merged the room's
-"Watching" roster and "Voice" box into **one clean People panel**: each viewer is a
-single row (presence dot · name · a **mic toggle at the far end**), with the
-Join-voice button directly below. The push-to-talk / open-mic selector was removed
-(deferred to a future voice settings page); the default is now **open-mic, joined
-muted** — you tap your own mic to start talking. A speaking ring rings the mic icon
-while voice is being picked up — **your own** ring is instant (local Web Audio
-`createAudioAnalyser`), while others' rings come from the server's debounced
-`ActiveSpeakersChanged`, which is the slight residual delay noticed in the live pass
-(snappier remote rings are backlogged under *Voice quality + monitoring*). The merge
-is keyed on userId === LiveKit identity and used everywhere (mobile People tab +
-desktop rail), so the voice call still mounts exactly once. See
-`journal/PHASE_5_4_MOBILE_PWA.md` §5.4.1. Phase 5 order: 5.1 reliability → 5.2 design
-system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1 People panel → **5.5 invite link**
-(next) → 5.6 delight. The next active sub-phase is **5.5**: a shareable invite link
-for public rooms (copy + native share), so joining doesn't require typing a code.
+Phases 1–5.4.1 are shipped + live-verified. **Phase 5.5** (invite link) is **built +
+static-green, awaiting its two-device live verify**: the invite link is just the room
+URL (`/room/<code>`), with a copy / native-share button in the room header **and** on
+each dashboard room card. Opening a **public** link **auto-joins** you and drops you
+straight into the room — the join fires **client-side on mount** (deliberately not
+during server render, so Next.js `<Link>` prefetch can't silently enroll a hovering
+user); **private** links land on a password card. It reuses the existing
+`/api/rooms/join` route (capacity / banned / ended / reactivation already handled)
+— **no new API route, no DB migration**. See `journal/PHASE_5_5_INVITE_LINK.md`. Phase
+5 order: 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1
+People panel → 5.5 invite link → **5.6 delight** (next). Once 5.5 passes its live pass,
+the next active sub-phase is **5.6**: spotlight reactions (3+ same emoji in ~2s → a big
+animated overlay) + a catch-up summary modal for latecomers.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both

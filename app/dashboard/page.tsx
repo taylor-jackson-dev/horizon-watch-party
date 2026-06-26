@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { roomPublicSelect } from "@/lib/rooms";
 import { DashboardActions } from "@/components/room/DashboardActions";
+import { InviteShareButton } from "@/components/room/InviteShareButton";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, Badge, buttonVariants } from "@/components/ui";
 
@@ -75,12 +76,15 @@ export default async function DashboardPage() {
                         {m.room.isPrivate ? "Private" : "Public"}
                       </div>
                     </div>
-                    <Link
-                      href={`/room/${m.room.joinCode}`}
-                      className={buttonVariants({ variant: "ghost", size: "sm" })}
-                    >
-                      Open
-                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <InviteShareButton joinCode={m.room.joinCode} roomName={m.room.name} />
+                      <Link
+                        href={`/room/${m.room.joinCode}`}
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                      >
+                        Open
+                      </Link>
+                    </div>
                   </Card>
                 </li>
               ))}
