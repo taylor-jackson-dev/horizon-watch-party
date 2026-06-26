@@ -1,7 +1,7 @@
 # Phase 5.4 — Mobile-Responsive + PWA (Manifest · Service Worker · Install)
 
 **Status:** ✅ Complete + verified live (2026-06-25) — static checks green (typecheck · lint · build) and confirmed on a real phone + desktop ("Everything checks out").
-**Follow-up:** §5.4.1 below — combined People panel (presentation-only), 🔄 static-green, awaiting its own two-device live pass.
+**Follow-up:** §5.4.1 below — combined People panel (presentation-only), ✅ complete + verified live (2026-06-25).
 **Live:** web `https://water-party-private-repo.vercel.app` · socket on Railway (deploys on push to `main`).
 
 ---
@@ -109,7 +109,7 @@ needed** beyond RoomShell — the room's view modes were the only real mobile ga
 
 # Phase 5.4.1 — Combined "People" Panel (Watching + Voice in one)
 
-**Status:** 🔄 Static checks green (typecheck · lint · build) — **awaiting two-device live verification.** Presentation-only follow-up to 5.4.
+**Status:** ✅ Complete + verified live (2026-06-25) — static checks green (typecheck · lint · build) and confirmed on a real phone + desktop ("Looks good on both ends"). Presentation-only follow-up to 5.4.
 **Live:** same as above (deploys on push to `main`).
 
 ## Goal
@@ -195,25 +195,39 @@ stacks above chat like theater. Still one fixed DOM; still pure-CSS mode/tab swi
   behavior is verified by build/type/lint + reasoning, then live. **Two-device live
   verification is the gate.**
 
-### Live checklist (real phone + desktop)
-- [ ] People panel shows ONE box: roster with a mic icon at the right of each name.
-- [ ] Before joining voice: no mic icons (you can't see the call roster yet); the
+### Live checklist (real phone + desktop) — ✅ verified 2026-06-25
+- [x] People panel shows ONE box: roster with a mic icon at the right of each name.
+- [x] Before joining voice: no mic icons (you can't see the call roster yet); the
       `Join voice chat` button sits directly below the roster.
-- [ ] Tap `Join voice chat` → you join **muted**; your row's mic icon appears (off).
-- [ ] Tap **your** mic icon → you go live (icon turns on); tap again → muted.
-- [ ] Other participants' mic icons reflect their state and **highlight while they talk**.
-- [ ] A green **ring** appears around any mic icon (yours + others') while sound is being
+- [x] Tap `Join voice chat` → you join **muted**; your row's mic icon appears (off).
+- [x] Tap **your** mic icon → you go live (icon turns on); tap again → muted.
+- [x] Other participants' mic icons reflect their state and **highlight while they talk**.
+- [x] A green **ring** appears around any mic icon (yours + others') while sound is being
       picked up and clears when they stop — the "voice is working" cue.
-- [ ] Host-muted member sees a locked off-icon ("Muted by host"), can't toggle.
-- [ ] `Leave` drops the call; `Step away` / `I'm back` still works (viewer only).
-- [ ] **Switching mobile tabs / desktop view modes does NOT drop a joined voice call**
+- [x] Host-muted member sees a locked off-icon ("Muted by host"), can't toggle.
+- [x] `Leave` drops the call; `Step away` / `I'm back` still works (viewer only).
+- [x] **Switching mobile tabs / desktop view modes does NOT drop a joined voice call**
       (the panel — and the voice hook — mounts once everywhere).
-- [ ] Desktop rail (theater + split) shows the same one combined panel above chat.
-- [ ] Voice-disabled room and view-only member each show the right note, no button.
+- [x] Desktop rail (theater + split) shows the same one combined panel above chat.
+- [x] Voice-disabled room and view-only member each show the right note, no button.
+
+**Finding:** one residual nit — a *slight* delay before **others'** speaking rings
+light up. Expected: your own ring is driven locally (Web Audio `createAudioAnalyser`,
+instant) but remote rings come from the server's debounced `ActiveSpeakersChanged`.
+Acceptable for now; the snappier-remote-ring fix (per-remote-track local analysis) is
+backlogged with the rest of the voice-quality work — see below.
 
 ## Follow-ups / known limits
 - **PTT / open-mic selector now lives nowhere in-room** — intentionally deferred to a
   future **voice settings page**. The hook still supports both modes.
+- **Voice quality + monitoring (future voice settings page)** — host request after the
+  live pass (2026-06-25). Three parts, backlogged in `PLAN.md`: **(a) mic monitoring**
+  (input-level meter, device picker, "test your mic" before joining); **(b) background
+  noise suppression** (LiveKit Krisp noise filter `@livekit/krisp-noise-filter` track
+  processor and/or browser `noiseSuppression`/`echoCancellation` constraints); **(c)
+  snappier remote speaking rings** — drive each remote ring from a per-remote-track
+  `createAudioAnalyser` (mirroring the local-speaking poll added here) instead of the
+  debounced server `ActiveSpeakersChanged`, which is the residual delay noted above.
 - **B2 — voice mic on mobile Safari** (`NotAllowedError`) still open; even more central
   now that the mic toggle is the primary voice control. Needs a real permission flow.
 - Pre-join we can't show who else is already on the call (LiveKit only reports the

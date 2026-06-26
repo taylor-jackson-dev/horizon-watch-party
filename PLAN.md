@@ -2,8 +2,8 @@
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
 > **Last Updated:** 2026-06-25  
-> **Phase:** 5.4 mobile/PWA complete + verified · 5.4.1 combined People panel
-> (static-green, awaiting live) · 5.5 invite link (next)
+> **Phase:** 5.4 mobile/PWA + 5.4.1 combined People panel complete + verified ·
+> 5.5 invite link (next)
 
 ---
 
@@ -478,25 +478,29 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 - *Webcam reactions* — tiny self-view bubble. Privacy minefield; design carefully if pursued.
 - *Room banner frames* — the lobby / viewers' room list shows a host-chosen **banner frame** per room, set in the (future) room-settings page after creation. Ships first as a **basic banner set**, then grows into **achievement-unlockable**, **custom**, and **premium** banners — ties into Phase 6 monetization and a future achievements system. Slot in when the room-settings page or the lobby/room-list gets its next pass (host note, 2026-06-24; not yet scheduled).
 - *"Front-row" cinema view mode* — a **4th view mode** joining theater / focus / split (Phase 5.3): the room's members render as **avatars seated front-row in silhouette** under a big-screen stage, "in a theater" feel. **Gated on avatars existing** (avatar upload was deferred out of Phase 4.4 — this is its marquee payoff). Wires cleanly into the `ViewMode` union + `gridColsClass`/layout switch already in `RoomShell`; pairs naturally with spotlight reactions (5.6 delight) and premium seat/silhouette cosmetics (Phase 6). Schedule alongside avatar upload (host note, 2026-06-24).
+- *Voice quality + monitoring (future voice settings page)* — a cluster of audio-quality upgrades, naturally landing alongside the deferred **voice settings page** (which also holds the PTT/open-mic selector removed in 5.4.1). Three parts: **(a) mic monitoring** — input-level meter, device picker, and a "test your mic" affordance so users can confirm hardware before joining; **(b) background noise suppression** — LiveKit's Krisp noise filter (`@livekit/krisp-noise-filter` track processor) and/or the browser `noiseSuppression`/`echoCancellation` constraints, host- or self-toggleable; **(c) snappier remote speaking indicators** — the residual ring delay noticed in the 5.4.1 live pass is the *remote* ring: each device sees its OWN ring instantly (local Web Audio `createAudioAnalyser`, added in 5.4.1) but everyone else's `isSpeaking` arrives via the server's debounced `RoomEvent.ActiveSpeakersChanged`. Fix is per-remote-track `createAudioAnalyser` on each subscribed audio track, mirroring the local-speaking approach, to drive remote rings locally instead of waiting on the server event (host note, 2026-06-25).
 
 ---
 
 ## Next Step → Phase 5.5: Invite Link
 
-Phases 1–5.4 are shipped + live-verified. **Phase 5.4.1** (combined People panel) is
-**built and static-green** (typecheck · lint · build) and **awaiting two-device live
-verification** — once confirmed on a real phone + desktop it's marked complete. It
-merged the room's "Watching" roster and "Voice" box into **one clean People panel**:
-each viewer is a single row (presence dot · name · a **mic toggle at the far end**),
-with the Join-voice button directly below. The push-to-talk / open-mic selector was
-removed (deferred to a future voice settings page); the default is now **open-mic,
-joined muted** — you tap your own mic to start talking. The merge is keyed on
-userId === LiveKit identity and used everywhere (mobile People tab + desktop rail), so
-the voice call still mounts exactly once. See `journal/PHASE_5_4_MOBILE_PWA.md`. Phase 5
-order: 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1
-People panel → **5.5 invite link** (next) → 5.6 delight. The next active sub-phase is
-**5.5**: a shareable invite link for public rooms (copy + native share), so joining
-doesn't require typing a code.
+Phases 1–5.4.1 are shipped + live-verified. **Phase 5.4.1** (combined People panel)
+is **complete + verified live** (two devices, 2026-06-25). It merged the room's
+"Watching" roster and "Voice" box into **one clean People panel**: each viewer is a
+single row (presence dot · name · a **mic toggle at the far end**), with the
+Join-voice button directly below. The push-to-talk / open-mic selector was removed
+(deferred to a future voice settings page); the default is now **open-mic, joined
+muted** — you tap your own mic to start talking. A speaking ring rings the mic icon
+while voice is being picked up — **your own** ring is instant (local Web Audio
+`createAudioAnalyser`), while others' rings come from the server's debounced
+`ActiveSpeakersChanged`, which is the slight residual delay noticed in the live pass
+(snappier remote rings are backlogged under *Voice quality + monitoring*). The merge
+is keyed on userId === LiveKit identity and used everywhere (mobile People tab +
+desktop rail), so the voice call still mounts exactly once. See
+`journal/PHASE_5_4_MOBILE_PWA.md` §5.4.1. Phase 5 order: 5.1 reliability → 5.2 design
+system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1 People panel → **5.5 invite link**
+(next) → 5.6 delight. The next active sub-phase is **5.5**: a shareable invite link
+for public rooms (copy + native share), so joining doesn't require typing a code.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both

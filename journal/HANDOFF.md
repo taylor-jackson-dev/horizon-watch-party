@@ -8,17 +8,16 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume phrase (paste this first in a new chat)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.4 are complete + verified live. Phase 5.4.1 (combined "People" panel —
+> Phases 1–5.4.1 are complete + verified live. Phase 5.4.1 (combined "People" panel —
 > watching roster + voice merged into one box, per-row mic toggle, join button below;
-> default open-mic/joined-muted) is built and static-green (typecheck · lint · build)
-> and pushed to `main` — it needs a two-device live pass (real phone + desktop) before
-> it's marked complete; run the §5.4.1 live checklist in
-> `journal/PHASE_5_4_MOBILE_PWA.md`. If 5.4.1 already verified, start Phase 5.5 —
-> invite link for public rooms (shareable link + copy/native-share). Read
-> `journal/HANDOFF.md`, `journal/PHASE_5_4_MOBILE_PWA.md`, and `PLAN.md` → Phase 5.
-> Order: 5.5 invite link → 5.6 delight. Voice settings page (PTT/open-mic selector
-> lives there), avatar upload, full sync watchdog, live polls, premium theme skins,
-> and the 4th "front-row" cinema view mode (gated on avatars) deferred.**
+> default open-mic/joined-muted; speaking ring around the mic icon) passed its
+> two-device live pass on 2026-06-25. Start Phase 5.5 — invite link for public rooms
+> (shareable link + copy/native-share). Read `journal/HANDOFF.md`,
+> `journal/PHASE_5_4_MOBILE_PWA.md`, and `PLAN.md` → Phase 5. Order: 5.5 invite link →
+> 5.6 delight. Deferred: voice settings page + voice-quality work (mic monitoring,
+> background-noise suppression, snappier remote speaking rings — see PLAN backlog),
+> avatar upload, full sync watchdog, live polls, premium theme skins, and the 4th
+> "front-row" cinema view mode (gated on avatars).**
 
 ---
 
@@ -76,15 +75,17 @@ theater.
   mobile **tabbed** layout (Chat · Queue · People under a pinned video) are all pure-CSS
   (also killed the latent remount-on-mode-switch bug). Confirmed two-device
   ("Everything checks out"). See `journal/PHASE_5_4_MOBILE_PWA.md`.
-- 🔄 **Phase 5.4.1 built — static-green, awaiting two-device live verify** (2026-06-25) —
-  combined **People panel**: the "Watching" roster + "Voice" box merged into one box —
-  each viewer is one row (presence dot · name · **mic toggle at the far end**), with the
-  Join-voice button directly below. PTT/open-mic selector removed (→ future voice
-  settings page); default **open-mic, joined muted** (tap your mic to talk). Keyed on
+- ✅ **Phase 5.4.1 complete + verified live** (2026-06-25) — combined **People panel**:
+  the "Watching" roster + "Voice" box merged into one box — each viewer is one row
+  (presence dot · name · **mic toggle at the far end**), with the Join-voice button
+  directly below. PTT/open-mic selector removed (→ future voice settings page); default
+  **open-mic, joined muted** (tap your mic to talk). A green speaking **ring** rings the
+  mic icon while voice is picked up — your own ring is instant (local Web Audio
+  `createAudioAnalyser`); others' rings ride the server's debounced
+  `ActiveSpeakersChanged` (a slight delay, backlogged under voice-quality work). Keyed on
   userId === LiveKit identity; used everywhere (mobile People tab + desktop rail) so the
-  voice call still mounts once. PresencePanel + VoicePanel deleted. Presentation-only.
-  Pushed to `main`; run the §5.4.1 checklist in `journal/PHASE_5_4_MOBILE_PWA.md` before
-  marking complete.
+  voice call still mounts once. PresencePanel + VoicePanel deleted. Confirmed two-device
+  ("Looks good on both ends"). See `journal/PHASE_5_4_MOBILE_PWA.md` §5.4.1.
 - 🔄 **Next: Phase 5.5** — invite link for public rooms (shareable link + copy /
   native-share).
 
