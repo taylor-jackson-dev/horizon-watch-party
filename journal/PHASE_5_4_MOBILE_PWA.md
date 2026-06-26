@@ -154,9 +154,13 @@ into one `Panel title="Watching"`:
   - *someone else* → read-only indicator; **highlights success while they're speaking**,
     dim when on, muted when off.
   - **Speaking ring** — anyone actively picking up sound (you included) gets a green
-    ring around their mic icon: the live "voice is working" cue. Driven by LiveKit's
-    active-speaker state (`isSpeaking`, which the hook reads for the local participant
-    too), gated on mic-on, and fades via CSS `transition` as it flips on/off.
+    ring around their mic icon: the live "voice is working" cue. Gated on mic-on and
+    fades via CSS `transition`. **Detection is dual-source:** others use LiveKit's
+    server `ActiveSpeakersChanged` (`isSpeaking`); your OWN ring is driven by a
+    **local Web Audio level poll** (`createAudioAnalyser` on the mic track, rAF loop,
+    threshold 0.02) because the server event is debounced + round-trips and visibly
+    lagged your own voice. The local flag is merged onto the local participant in
+    `useVoiceRoom` so the UI stays a single `isSpeaking` read.
 - **Below the roster:** the voice controls — `Join voice chat` (→ `Joining…` /
   `Reconnecting…`), or when connected a short status line + a `Leave` button; voice
   errors surface here. Voice-disabled / view-only show a one-line note instead of a

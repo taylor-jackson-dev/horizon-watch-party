@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Room,
   RoomEvent,
   Track,
+  createAudioAnalyser,
   type Participant,
   type RemoteTrack,
 } from "livekit-client";
@@ -85,6 +86,11 @@ export function useVoiceRoom(roomId: string) {
   const [openMicEnabled, setOpenMicEnabled] = useState(false);
   const [pttActive, setPttActive] = useState(false);
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
+  // Low-latency local speaking flag, polled from the mic's Web Audio level.
+  // The server-driven isSpeaking (used for everyone) is debounced and
+  // round-trips, so it visibly lagged your own voice; this drives just your
+  // own indicator and is merged onto the local participant below.
+  const [localSpeaking, setLocalSpeaking] = useState(false);
 
   const roomRef = useRef<Room | null>(null);
   const audioSinkRef = useRef<HTMLDivElement | null>(null);
@@ -240,6 +246,46 @@ export function useVoiceRoom(roomId: string) {
       });
   }, [effectiveMicEnabled, status]);
 
+  // Local mic level → instant speaking flag. ActiveSpeakersChanged (the source
+  // for everyone's isSpeaking) is debounced and round-trips through the server,
+  // so your OWN ring lagged your voice. Polling the mic's audio level locally
+  // makes the self-indicator react within a frame. Only runs while the mic is
+  // actually live; the analyser is created lazily once the track is published.
+  useEffect(() => {
+    if (status !== "connected" || !effectiveMicEnabled) {
+      setLocalSpeaking(false);
+      return;
+    }
+    const room = roomRef.current;
+    if (!room) return;
+
+    let raf = 0;
+    let handle: ReturnType<typeof createAudioAnalyser> | null = null;
+    const SPEAKING_THRESHOLD = 0.02;
+
+    const tick = () => {
+      if (!handle) {
+        const track = room.localParticipant.getTrackPublication(
+          Track.Source.Microphone,
+        )?.audioTrack;
+        if (track) {
+          handle = createAudioAnalyser(track, { smoothingTimeConstant: 0.2 });
+        }
+      }
+      if (handle) {
+        setLocalSpeaking(handle.calculateVolume() > SPEAKING_THRESHOLD);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      void handle?.cleanup();
+      setLocalSpeaking(false);
+    };
+  }, [effectiveMicEnabled, status]);
+
   // PTT keyboard listener — only active in PTT mode while connected.
   // Window blur safety-releases in case keyup is missed (alt-tab while held).
   useEffect(() => {
@@ -277,6 +323,17 @@ export function useVoiceRoom(roomId: string) {
     };
   }, []);
 
+  // Overlay the instant local-speaking flag onto the local participant so the
+  // UI's mic ring uses it instead of the laggy server value. setLocalSpeaking
+  // only flips on threshold crossings, so this re-derives rarely.
+  const mergedParticipants = useMemo(
+    () =>
+      localSpeaking
+        ? participants.map((p) => (p.isLocal ? { ...p, isSpeaking: true } : p))
+        : participants,
+    [participants, localSpeaking],
+  );
+
   return {
     status,
     error,
@@ -291,7 +348,7 @@ export function useVoiceRoom(roomId: string) {
       if (mode === "ptt" && status === "connected") setPttActive(true);
     }, [mode, status]),
     releasePtt: useCallback(() => setPttActive(false), []),
-    participants,
+    participants: mergedParticipants,
     join,
     leave,
     pttKeyLabel: PTT_KEY.toUpperCase(),
