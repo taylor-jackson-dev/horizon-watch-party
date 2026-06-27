@@ -8,7 +8,12 @@ import { prisma } from "@/lib/prisma";
 import { verifySocketToken, type SocketTokenClaims } from "@/lib/socket-token";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
 import { isAllowedReactionEmoji } from "@/lib/validations/reactions";
-import { chatRateLimiter, reactionRateLimiter } from "@/lib/rate-limit";
+import {
+  chatRateLimiter,
+  reactionRateLimiter,
+  CHAT_RATE_LIMIT_WINDOW_MS,
+  REACTION_RATE_LIMIT_WINDOW_MS,
+} from "@/lib/rate-limit";
 
 // Railway (and most PaaS hosts) inject the listen port as PORT; SOCKET_PORT is
 // the local-dev override, 3001 the final fallback.
@@ -46,6 +51,29 @@ const roomStates = new Map<string, VideoState>();
 // Expired/invalidated by `room:host-changed` (not implemented yet —
 // hostId on the Room model doesn't change in Phase 3).
 const roomHosts = new Map<string, string>();
+
+// ── Rate-limit map sweep ──────────────────────────────────────────
+// The two limiter Maps only self-prune a key when that same key is
+// touched again, so a user who sends once and never returns leaves their
+// entry resident forever — unbounded growth in distinct (userId, roomId)
+// pairs over weeks of uptime. Periodically drop any key whose newest
+// timestamp has aged past its window; such entries can no longer change a
+// rate-limit decision. Timestamps are appended in order, so the last
+// element is the newest. `.unref()` keeps this timer from blocking shutdown.
+const RATE_LIMIT_SWEEP_INTERVAL_MS = 60_000;
+
+function sweepRateLimits(map: Map<string, number[]>, windowMs: number): void {
+  const cutoff = Date.now() - windowMs;
+  map.forEach((timestamps, key) => {
+    const newest = timestamps[timestamps.length - 1];
+    if (newest === undefined || newest <= cutoff) map.delete(key);
+  });
+}
+
+setInterval(() => {
+  sweepRateLimits(chatRateLimiter.hits, CHAT_RATE_LIMIT_WINDOW_MS);
+  sweepRateLimits(reactionRateLimiter.hits, REACTION_RATE_LIMIT_WINDOW_MS);
+}, RATE_LIMIT_SWEEP_INTERVAL_MS).unref();
 
 async function getRoomHost(roomId: string): Promise<string | null> {
   const cached = roomHosts.get(roomId);
@@ -129,7 +157,16 @@ function removePresence(channel: string, userId: string, socketId: string): void
   if (!entry) return;
   entry.sockets.delete(socketId);
   if (entry.sockets.size === 0) members.delete(userId);
-  if (members.size === 0) roomPresence.delete(channel);
+  if (members.size === 0) {
+    roomPresence.delete(channel);
+    // Last viewer left: drop the per-room caches too. They're keyed by raw
+    // roomId (presence is keyed by the full channel), so derive the id from
+    // the channel. Without this they'd persist for the life of the process,
+    // and a future joiner of a recreated room would get stale playback state.
+    const roomId = roomIdFromChannel(channel);
+    roomStates.delete(roomId);
+    roomHosts.delete(roomId);
+  }
 }
 
 // ── Auth middleware ───────────────────────────────────────────────
@@ -526,8 +563,14 @@ async function markItemPlayed(itemId: string): Promise<void> {
   });
 }
 
+const ROOM_CHANNEL_PREFIX = "room:";
+
 function roomChannel(roomId: string): string {
-  return `room:${roomId}`;
+  return `${ROOM_CHANNEL_PREFIX}${roomId}`;
+}
+
+function roomIdFromChannel(channel: string): string {
+  return channel.slice(ROOM_CHANNEL_PREFIX.length);
 }
 
 function log(line: string): void {
