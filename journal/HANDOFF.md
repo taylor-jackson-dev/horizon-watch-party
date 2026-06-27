@@ -29,11 +29,11 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 Three **independent** workstreams for the next session — tackle in any order:
 
-1. **Product (the roadmap):** Phase 5.5 two-device live verify → then Phase 5.6 (delight). This is what the resume phrase above is about.
-2. **Build the research agent** (new — under a "research umbrella," parallel to the review umbrella). My full thinking is in `## Research agent — proposed` near the bottom.
-3. **Socket-server hardening** from the first `review-code` audit. Details + checklist live in `DEFERRED.md → Code Audit Backlog`. ⚠️ **Both fix chips' output is already sitting in the working tree, UNCOMMITTED + unverified** (map eviction + `.unref()` sweep in `server/socket-server.ts`; new `lib/rate-limit.ts` + `tests/rate-limit.test.ts`). **It currently fails typecheck** — a one-line Map-iteration fix at `server/socket-server.ts:67` (lint + 22 tests are green; see `DEFERRED.md`) — so fix → verify → commit them (their chat sessions are "waiting"). The **process-crash guard (High)** is *not* covered by either chip — pick that one up here.
+1. **Product (the roadmap):** Phase 5.5 two-device live verify → then Phase 5.6 (delight). This is what the resume phrase above is about. **← still the main open item.**
+2. ✅ **Research agent — BUILT + dogfood-tested + tuned** (2026-06-27). `~/.claude/agents/researcher.md`, under a "research umbrella" parallel to the review umbrella. Smoke-tested via a stand-in (user-authorized), which surfaced 3 refinements — now applied. Full record in `## Research agent — BUILT` near the bottom. First *native* spawn happens after this `/clear`.
+3. ✅ **Socket-server hardening — DONE locally.** Both fix chips + the process-crash guard are committed on `main` and green (typecheck · lint · build · 22 tests): `adccc12` (rate-limit extraction + tests), `1316769` (map-bounding sweep), `7eba2fc` (crash guards + global nets). **Committed but NOT pushed** — a push redeploys the Railway socket server, so the deploy is held for a deliberate batch (these are hardening, not a verify gate). Remaining open items (room:join ACTIVE gap, latent roomHosts staleness, uncaptured Medium/Low cluster) are in `DEFERRED.md → Code Audit Backlog`.
 
-**Review-system note:** the `review-*` umbrella is complete and `review-code` is approved + tuned (see `## Review system` below). Custom agents only register at startup, so **after this `/clear`, `review-code` becomes natively spawnable** as a subagent (this session ran it through a general-purpose stand-in).
+**Review-system note:** the `review-*` umbrella is complete and `review-code` is approved + tuned (see `## Review system` below). Custom agents only register at startup, so **after this `/clear`, both `review-code` AND the new `researcher` become natively spawnable** as subagents (this session ran review through a general-purpose stand-in; `researcher` has not been spawned at all yet).
 
 ---
 
@@ -176,28 +176,75 @@ project memory `review_agents_umbrella.md`:
 
 ---
 
-## Research agent — proposed (build next chat)
+## Research agent — BUILT (2026-06-27)
 
-**Why:** Anthropic's built-in `WebSearch`/`WebFetch` crawler is blocked by some sites
-(Reddit returns "not accessible to our user agent"), so practitioner research on those
-sources is hard with the default tools.
+**Status:** Shipped + dogfood-tested + tuned. File: `~/.claude/agents/researcher.md` (global,
+alongside `review-logic`/`review-code`). Validated — well-formed frontmatter, canonical tool
+names, registers exactly like the review agents. **Smoke-tested 2026-06-27** via a
+`general-purpose` stand-in (told to read `researcher.md` and operate as it — a native spawn
+can't register mid-session): it produced a clean cited brief on YouTube IFrame sync, and the
+anti-hallucination **Verify gate demonstrably fired** (it labeled an NTP formula it couldn't
+source `(unverified)` rather than fabricate it). The test surfaced **3 refinements, now
+applied** (see *Tuning* below). First *native* spawn happens after this `/clear`.
 
-**What I will NOT build:** a user-agent-spoofing / anti-bot-evasion scraper that "appears
-as a normal web user." It's brittle (anti-bot measures change constantly → frequent
-breakage), it risks violating site ToS (Reddit included), and it's an arms race not worth
-maintaining.
+**What it is:** a senior-analyst agent that produces accurate, **citation-backed** briefs.
+North star (mirrors the review umbrella's "precision over volume"): **accuracy and
+verifiable sourcing over volume** — cite only sources actually opened, cross-check
+load-bearing claims across ≥2 independent sources, keep "sources say" distinct from "my
+read," and state plainly what couldn't be established. Hallucination is the failure mode it
+is built to prevent.
 
-**The legitimate path — Claude-in-Chrome:** drive the user's *real* Chrome (logged in as
-them) via the `claude-in-chrome` MCP. That isn't spoofing — it *is* a real human's browser
-session, so it can read what the user can read (Reddit threads, gated forums) and
-navigate/extract legitimately. Requires the Chrome extension connected.
+**Architecture — orchestrator + on-demand subagents (user-approved):**
+- Runs **solo by default** (most jobs). **Fans out** only for genuinely broad jobs that
+  split into *independent* sub-questions — one scoped sub-researcher per sub-question via the
+  `Agent` tool, in **leaf mode** ("do not fan out further"), **one level** deep.
+- Why so disciplined: fan-out costs ~7× tokens, and Claude Code's nested-subagent support
+  (live since **v2.1.172**, 2026-06-10; hard-capped at 5 levels) carries a known
+  recursion/efficiency footgun (gh issue #68619). Real-world comparisons find multi-agent
+  often buys only a few quality points for several× the cost. So: budget effort to stakes.
+- `tools: Read, Write, Grep, Glob, Bash, WebSearch, WebFetch, Agent, TodoWrite` ·
+  `model: inherit`. Read-mostly: never edits source code; `Write` only saves briefs;
+  `Bash`/`gh` read-only.
 
-**Proposed design (a "research umbrella," parallel to review):**
-- Default to `WebSearch`/`WebFetch` (fast, no browser) for open content; **escalate to
-  Claude-in-Chrome only** for human-gated sources that block the crawler.
-- Deliverable = a **cited, multi-source research brief**: synthesize across sources, cite
-  each claim, separate consensus from outliers, flag low-confidence/unverified points.
-- Scope it for the "more arduous / extensive research" the user wants, with the same
-  **precision-over-volume** discipline as the review agents.
-- Reddit-specific fallbacks if ever needed: a thread's public `.json` endpoint / old.reddit
-  — but these are increasingly gated; Claude-in-Chrome is the robust path.
+**Workflow (improves the user's Scraper→contextualize→present→review sketch):**
+Scope → Gather → **Verify (anti-hallucination gate)** → Sufficiency check → Contextualize →
+Present — run as a loop, not a line. The three real adds vs the sketch: an explicit **Scope**
+step (budget to complexity, `TodoWrite` decomposition up front), a **Verify/citation gate**
+before synthesis, and a folded-in self-critique pass. "Scraper" became "tiered Gather" —
+we deliberately do not scrape or spoof.
+
+**Source strategy (tiered, legitimate):**
+- **Default — open web:** `WebSearch` + `WebFetch` (docs, papers, engineering blogs, open
+  forums like Hacker News). Covers most needs.
+- **Gated sources (e.g. Reddit) — search-snippet route:** put the site name *in the query*
+  (`reddit <topic> experience`) WITHOUT an `allowed_domains: ["reddit.com"]` filter — that
+  filter 400s because Reddit blocks our crawler UA. Read the **indexed snippets**:
+  practitioner sentiment without crawling the site or touching any logged-in session.
+  Triangulate across several angled queries since snippets are shallow.
+- **Claude-in-Chrome — opt-in last resort only.** *Decision reversed from the original
+  proposal.* The user judged driving their real logged-in browser too risky for
+  routine public research (session/cookie exposure + every page read becomes a
+  prompt-injection surface). It is now last-resort, explicit-opt-in only, for sources that
+  *genuinely* require it — NOT the default escalation. We will NOT build a UA-spoofing
+  scraper either (brittle, ToS risk, arms race).
+
+**Growth path (start simple; promote only when proven):** documented in the agent file and
+here — a dedicated `research-worker` (an `Agent`-less leaf; the safe fix if fan-out
+recursion ever misbehaves), a `citation-verifier` (Anthropic's multi-agent research system
+runs citations as a separate pass), or domain specialists. Don't build these until real
+usage shows the need.
+
+**Tuning — 3 refinements from the dogfood test (applied 2026-06-27):**
+1. **Snippet citations now have a home in the citation gate.** Added a `[WebSearch: "<query>"]`
+   citation convention (Output/Sources + the citation rule) so a claim drawn from search
+   snippets — the gated-source route — is cited honestly as an aggregated-snippet source
+   instead of being dressed up as (or tempting a fabricated) single-page URL.
+2. **"Independent sources" now explicitly discounts self-promotion.** The cross-check rule
+   spells out that a vendor's own docs/blog/press-release (or several pages tracing to one
+   origin) count as a *single* self-interested source — corroborate against a neutral party
+   before a claim counts as established.
+3. **Paywalls / 402 are an expected outcome, not an error to fight.** New source-strategy
+   bullet: route around a 402/login-wall (abstract from search, open-access mirror/preprint,
+   or cite `(paywalled — abstract only)` + lower confidence) — and it's *distinct* from
+   Reddit's UA block, which has the snippet workaround; a paywall does not. Never fabricate
+   the body of a source you couldn't open.
