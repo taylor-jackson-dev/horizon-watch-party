@@ -272,14 +272,19 @@ io.on("connection", (socket: Socket) => {
       const roomId = payload?.roomId;
       if (!roomId) return cb?.({ ok: false });
       const channel = roomChannel(roomId);
-      await socket.leave(channel);
-      s.data.rooms.delete(channel);
-      socket
-        .to(channel)
-        .emit("room:peer-left", { userId, socketId: socket.id });
-      removePresence(channel, userId, socket.id);
-      broadcastPresence(channel);
-      cb?.({ ok: true });
+      try {
+        await socket.leave(channel);
+        s.data.rooms.delete(channel);
+        socket
+          .to(channel)
+          .emit("room:peer-left", { userId, socketId: socket.id });
+        removePresence(channel, userId, socket.id);
+        broadcastPresence(channel);
+        cb?.({ ok: true });
+      } catch (err) {
+        log(`! room:leave failed user=${userId} room=${roomId} ${err instanceof Error ? err.message : err}`);
+        cb?.({ ok: false });
+      }
     },
   );
 
@@ -319,37 +324,41 @@ io.on("connection", (socket: Socket) => {
         return;
       }
 
-      const hostId = await getRoomHost(roomId);
-      if (!hostId) return;
-      if (hostId !== userId) {
-        // Non-hosts cannot drive sync state.
-        return;
+      try {
+        const hostId = await getRoomHost(roomId);
+        if (!hostId) return;
+        if (hostId !== userId) {
+          // Non-hosts cannot drive sync state.
+          return;
+        }
+
+        const positionSecs = typeof payload.positionSecs === "number" && payload.positionSecs >= 0
+          ? payload.positionSecs
+          : 0;
+        const isPlaying = !!payload.isPlaying;
+        const itemId = payload.itemId ?? null;
+
+        const prev = roomStates.get(roomId);
+        const next: VideoState = {
+          itemId,
+          positionSecs,
+          isPlaying,
+          updatedAt: Date.now(),
+        };
+        roomStates.set(roomId, next);
+
+        // If the item changed, mark the previous one played in the DB.
+        // Fire-and-forget; sync broadcast doesn't wait on the write.
+        if (prev?.itemId && prev.itemId !== itemId) {
+          void markItemPlayed(prev.itemId).catch((err) => {
+            log(`! markItemPlayed failed item=${prev.itemId} ${err instanceof Error ? err.message : err}`);
+          });
+        }
+
+        socket.to(roomChannel(roomId)).emit("video:state", next);
+      } catch (err) {
+        log(`! video:state failed user=${userId} room=${roomId} ${err instanceof Error ? err.message : err}`);
       }
-
-      const positionSecs = typeof payload.positionSecs === "number" && payload.positionSecs >= 0
-        ? payload.positionSecs
-        : 0;
-      const isPlaying = !!payload.isPlaying;
-      const itemId = payload.itemId ?? null;
-
-      const prev = roomStates.get(roomId);
-      const next: VideoState = {
-        itemId,
-        positionSecs,
-        isPlaying,
-        updatedAt: Date.now(),
-      };
-      roomStates.set(roomId, next);
-
-      // If the item changed, mark the previous one played in the DB.
-      // Fire-and-forget; sync broadcast doesn't wait on the write.
-      if (prev?.itemId && prev.itemId !== itemId) {
-        void markItemPlayed(prev.itemId).catch((err) => {
-          log(`! markItemPlayed failed item=${prev.itemId} ${err instanceof Error ? err.message : err}`);
-        });
-      }
-
-      socket.to(roomChannel(roomId)).emit("video:state", next);
     },
   );
 
@@ -381,13 +390,17 @@ io.on("connection", (socket: Socket) => {
       const roomId = payload?.roomId;
       if (!roomId || !s.data.rooms.has(roomChannel(roomId))) return;
 
-      const member = await prisma.roomMember.findUnique({
-        where: { roomId_userId: { roomId, userId } },
-        select: { status: true },
-      });
-      if (!member || member.status !== "ACTIVE") return;
+      try {
+        const member = await prisma.roomMember.findUnique({
+          where: { roomId_userId: { roomId, userId } },
+          select: { status: true },
+        });
+        if (!member || member.status !== "ACTIVE") return;
 
-      socket.to(roomChannel(roomId)).emit("queue:changed");
+        socket.to(roomChannel(roomId)).emit("queue:changed");
+      } catch (err) {
+        log(`! queue:changed failed user=${userId} room=${roomId} ${err instanceof Error ? err.message : err}`);
+      }
     },
   );
 
@@ -592,5 +605,21 @@ function shutdown(signal: string): void {
   });
   setTimeout(() => process.exit(1), 5_000).unref();
 }
+
+// ── Last-resort crash guards ──────────────────────────────────────
+// The per-handler try/catch blocks are the real protection. These are the
+// net for anything that still slips past: a real-time relay must never let
+// one stray throw or rejected promise take the whole process down, since
+// that would drop every connected room at once. Log and keep serving.
+// (Node deems the process state "undefined" after an uncaughtException; for
+// a stateless socket relay that risk is acceptable next to disconnecting
+// everyone, and Railway still restarts us if the process does exit.)
+process.on("uncaughtException", (err) => {
+  log(`! uncaughtException ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+});
+process.on("unhandledRejection", (reason) => {
+  log(`! unhandledRejection ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`);
+});
+
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
