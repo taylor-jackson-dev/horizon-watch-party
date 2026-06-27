@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui";
-import { CheckIcon, ShareIcon } from "@/components/ui/icons";
+import { CheckIcon, CloseIcon, ShareIcon } from "@/components/ui/icons";
 
 interface InviteShareButtonProps {
   joinCode: string;
@@ -27,15 +27,15 @@ export function InviteShareButton({
   label = "Invite",
   className,
 }: InviteShareButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 
-  function flashCopied() {
-    setCopied(true);
+  function flash(next: "copied" | "failed") {
+    setStatus(next);
     clearTimeout(resetTimer.current);
-    resetTimer.current = setTimeout(() => setCopied(false), 2000);
+    resetTimer.current = setTimeout(() => setStatus("idle"), 2000);
   }
 
   async function onShare() {
@@ -59,11 +59,20 @@ export function InviteShareButton({
 
     try {
       await navigator.clipboard.writeText(url);
-      flashCopied();
+      flash("copied");
     } catch {
-      // Clipboard blocked (rare on https) — nothing more we can do silently.
+      // No share API and clipboard blocked (insecure context / policy) — tell the user.
+      flash("failed");
     }
   }
+
+  const forName = roomName ? ` for ${roomName}` : "";
+  const ariaLabel =
+    status === "copied"
+      ? "Invite link copied"
+      : status === "failed"
+        ? "Copy failed"
+        : `Share invite link${forName}`;
 
   return (
     <Button
@@ -71,10 +80,16 @@ export function InviteShareButton({
       size={size}
       className={className}
       onClick={onShare}
-      aria-label={`Copy invite link${roomName ? ` for ${roomName}` : ""}`}
+      aria-label={ariaLabel}
     >
-      {copied ? <CheckIcon size={16} className="text-success" /> : <ShareIcon size={16} />}
-      {copied ? "Copied!" : label}
+      {status === "copied" ? (
+        <CheckIcon size={16} className="text-success" />
+      ) : status === "failed" ? (
+        <CloseIcon size={16} className="text-danger" />
+      ) : (
+        <ShareIcon size={16} />
+      )}
+      {status === "copied" ? "Copied!" : status === "failed" ? "Copy failed" : label}
     </Button>
   );
 }

@@ -88,6 +88,7 @@ export function JoinGate({ joinCode, roomName, isPrivate, isEnded }: JoinGatePro
             className="input"
             type="password"
             placeholder="Room password"
+            aria-label="Room password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             maxLength={64}
