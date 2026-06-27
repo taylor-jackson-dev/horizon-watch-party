@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { verifySocketToken, type SocketTokenClaims } from "@/lib/socket-token";
 import { MESSAGE_MAX_LENGTH } from "@/lib/config";
 import { isAllowedReactionEmoji } from "@/lib/validations/reactions";
+import { chatRateLimiter, reactionRateLimiter } from "@/lib/rate-limit";
 
 // Railway (and most PaaS hosts) inject the listen port as PORT; SOCKET_PORT is
 // the local-dev override, 3001 the final fallback.
@@ -45,50 +46,6 @@ const roomStates = new Map<string, VideoState>();
 // Expired/invalidated by `room:host-changed` (not implemented yet —
 // hostId on the Room model doesn't change in Phase 3).
 const roomHosts = new Map<string, string>();
-
-// ── Chat rate limiting ────────────────────────────────────────────
-// Sliding-window per (userId, roomId). The DB-side CHAT_RATE_LIMIT_PER_MINUTE
-// in config.ts is a coarser policy for future Redis enforcement; this
-// in-memory limiter is the fast guard that runs on every send.
-const CHAT_RATE_LIMIT_COUNT = 5;
-const CHAT_RATE_LIMIT_WINDOW_MS = 5_000;
-const chatRateLimits = new Map<string, number[]>();
-
-function checkChatRateLimit(userId: string, roomId: string): boolean {
-  const key = `${userId}:${roomId}`;
-  const now = Date.now();
-  const cutoff = now - CHAT_RATE_LIMIT_WINDOW_MS;
-  const recent = (chatRateLimits.get(key) ?? []).filter((t) => t > cutoff);
-  if (recent.length >= CHAT_RATE_LIMIT_COUNT) {
-    chatRateLimits.set(key, recent);
-    return false;
-  }
-  recent.push(now);
-  chatRateLimits.set(key, recent);
-  return true;
-}
-
-// ── Reaction rate limiting ────────────────────────────────────────
-// Same sliding-window shape as chat but tuned looser — reactions are
-// inherently spammy (that's the point). The DB-side
-// REACTION_RATE_LIMIT_PER_MINUTE=30 is the coarser future-Redis policy.
-const REACTION_RATE_LIMIT_COUNT = 10;
-const REACTION_RATE_LIMIT_WINDOW_MS = 5_000;
-const reactionRateLimits = new Map<string, number[]>();
-
-function checkReactionRateLimit(userId: string, roomId: string): boolean {
-  const key = `${userId}:${roomId}`;
-  const now = Date.now();
-  const cutoff = now - REACTION_RATE_LIMIT_WINDOW_MS;
-  const recent = (reactionRateLimits.get(key) ?? []).filter((t) => t > cutoff);
-  if (recent.length >= REACTION_RATE_LIMIT_COUNT) {
-    reactionRateLimits.set(key, recent);
-    return false;
-  }
-  recent.push(now);
-  reactionRateLimits.set(key, recent);
-  return true;
-}
 
 async function getRoomHost(roomId: string): Promise<string | null> {
   const cached = roomHosts.get(roomId);
@@ -428,7 +385,7 @@ io.on("connection", (socket: Socket) => {
       if (!s.data.rooms.has(roomChannel(roomId))) {
         return cb?.({ ok: false, error: "Not joined to this room" });
       }
-      if (!checkChatRateLimit(userId, roomId)) {
+      if (!chatRateLimiter.check(userId, roomId)) {
         return cb?.({ ok: false, error: "slow_down" });
       }
 
@@ -510,7 +467,7 @@ io.on("connection", (socket: Socket) => {
       if (!s.data.rooms.has(roomChannel(roomId))) {
         return cb?.({ ok: false, error: "Not joined to this room" });
       }
-      if (!checkReactionRateLimit(userId, roomId)) {
+      if (!reactionRateLimiter.check(userId, roomId)) {
         return cb?.({ ok: false, error: "slow_down" });
       }
 
