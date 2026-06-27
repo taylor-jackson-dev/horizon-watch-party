@@ -16,6 +16,24 @@ Tracks known work intentionally pushed to later. Each item lists **what**, **why
 
 ---
 
+## Code Audit Backlog — `server/socket-server.ts` (2026-06-27)
+
+First `review-code` audit (the new on-demand structural-audit agent — see `journal/HANDOFF.md` → Review system). Scope was the Socket.io real-time engine **only**. Verdict on the raw audit: **0 Critical · 4 High · 6 Medium · 4 Low**; a trust-but-verify recheck downgraded two of the Highs (see below). These are **hardening / tech-debt on a working system — NOT blockers** for Phase 5.5/5.6. Batch them before a real load test or the pre-launch gate.
+
+**Both fix chips have already produced changes — they are in the working tree NOW, uncommitted and not yet verified** (the chip sessions are open / "waiting" in their own chats for review). Confirm green (`npm run typecheck && npm run lint && npm run build && npm test`) and commit them from there (or here). They cover:
+- [~] **Chip A — bound the unbounded maps** *(was High #2)* — in tree: `removePresence` now deletes `roomStates` + `roomHosts` when the last viewer leaves (new `roomIdFromChannel` helper), **plus** a periodic `setInterval(…).unref()` sweep that prunes aged-out rate-limit buckets. ⚠️ **Currently fails typecheck** — `server/socket-server.ts:67` iterates a Map with `for (const [k, v] of map)`, which this project's tsconfig target rejects (`TS2802`). One-line fix: switch to `map.forEach((timestamps, key) => …)` (deleting the current key inside `forEach` is safe) or `Array.from(map.entries())`. (Lint ✔ · 22 tests ✔ as of 2026-06-27.)
+- [~] **Chip B — extract + unit-test the rate-limit helpers** — in tree: new pure `lib/rate-limit.ts` (`createRateLimiter` + `chatRateLimiter`/`reactionRateLimiter`, exported count/window constants, a `hits` bucket map) with `tests/rate-limit.test.ts`; `server/socket-server.ts` now calls `chatRateLimiter.check()` / `reactionRateLimiter.check()`.
+
+**NOT covered by either chip — handle in the next chat (or as new chips):**
+- [ ] **[High] Process-crash guard** *(the only uncovered High — highest-value item)* — `video:state` (~:314-360) and `queue:changed` (~:384-398) are `async` handlers with **no try/catch**; an unhandled rejection can crash the Node process, and there is **no** `process.on('uncaughtException' | 'unhandledRejection')` net (only a SIGINT/SIGTERM `shutdown`). Wrap both handlers like `chat:send`/`reaction:send` already are, **and** add global handlers that log + keep the process alive.
+- [ ] **[Low, real] Socket `room:join` should require `status === ACTIVE`** — `room:join` (~:224-270) rejects non-members and BANNED members but does **not** require `status === ACTIVE`, so a member who `LEFT` can re-establish presence over the socket without re-clearing the REST `/api/rooms/join` capacity check. (Capacity itself is **not** bypassable — the REST route caps ACTIVE membership and the socket requires existing membership. This first *looked* like a High "capacity bypass"; reading **both** layers showed it's a narrow presence-state gap. That miss is exactly why review-code now carries a cross-layer-verification rule.)
+- [ ] **[Medium] Stale `roomHosts` host cache** *(was High #3 → latent)* — `getRoomHost` caches the host forever; correct **today** because `hostId` is immutable, but it will serve stale data the moment host transfer/CO_HOST promotion ships. Add invalidation when that lands.
+- [ ] **Remaining Medium/Low cluster** — the audit listed 6 Medium · 4 Low total; only the items above were captured in detail. **Re-run `review-code` on `server/socket-server.ts`** in the next chat to regenerate the full ranked list with `path:line` cites before acting.
+
+**When to revisit:** batch the process-crash guard + the two chips before any multi-room load test or the pre-launch gate; the Medium/Low items can ride along.
+
+---
+
 ## Credentials Still to Grab
 
 - [ ] **Supabase Transaction pooler URL** → goes into `DATABASE_URL`.

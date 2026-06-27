@@ -25,6 +25,18 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 ---
 
+## Next-chat agenda (queued 2026-06-27)
+
+Three **independent** workstreams for the next session — tackle in any order:
+
+1. **Product (the roadmap):** Phase 5.5 two-device live verify → then Phase 5.6 (delight). This is what the resume phrase above is about.
+2. **Build the research agent** (new — under a "research umbrella," parallel to the review umbrella). My full thinking is in `## Research agent — proposed` near the bottom.
+3. **Socket-server hardening** from the first `review-code` audit. Details + checklist live in `DEFERRED.md → Code Audit Backlog`. ⚠️ **Both fix chips' output is already sitting in the working tree, UNCOMMITTED + unverified** (map eviction + `.unref()` sweep in `server/socket-server.ts`; new `lib/rate-limit.ts` + `tests/rate-limit.test.ts`). **It currently fails typecheck** — a one-line Map-iteration fix at `server/socket-server.ts:67` (lint + 22 tests are green; see `DEFERRED.md`) — so fix → verify → commit them (their chat sessions are "waiting"). The **process-crash guard (High)** is *not* covered by either chip — pick that one up here.
+
+**Review-system note:** the `review-*` umbrella is complete and `review-code` is approved + tuned (see `## Review system` below). Custom agents only register at startup, so **after this `/clear`, `review-code` becomes natively spawnable** as a subagent (this session ran it through a general-purpose stand-in).
+
+---
+
 ## What this project is
 
 **Watch Party** — cross-platform social video-watching app (synced YouTube
@@ -138,3 +150,54 @@ At each phase boundary, run the **phase-end ritual**:
 5. **never** suggest `/compact` across phases — `/clear` only
 
 Journals are the source of truth for cross-session context.
+
+---
+
+## Review system (`review-*` umbrella — global, all projects)
+
+Read-only review agents live in `~/.claude/agents/` (cross-project), documented in the
+project memory `review_agents_umbrella.md`:
+
+- **review-logic** — per-change correctness. Run **every phase** on the diff before live
+  verify (now **Part A** of the phase-end ritual: build → review-logic → apply fixes →
+  unit-test new pure logic → typecheck/lint/build → live-verify).
+- **review-code** — on-demand structural/architectural audit (severity scale
+  Critical/High/Medium/Low + Strengths, with a prioritized remediation plan). Run at
+  phase-*group* boundaries, before a refactor, before launch, or when inheriting/scaling
+  code — **NOT** per sub-phase. **Approved 2026-06-27** with two tunings: (a) **cross-layer
+  verification** — never rate a bypass/cross-layer claim High/Critical without reading
+  *both* layers (else cap Medium + label unverified); (b) **propose, don't auto-create**
+  follow-up task chips — it ends with a "Proposed follow-up tasks" list for you to approve.
+- Plus the `/security-review` skill (deep security pass) and the `simplify` skill
+  (simplify *changed* code).
+- **Watch Party plan:** first `review-code` audit was a test-drive on
+  `server/socket-server.ts` (findings in `DEFERRED.md`); next at the end of the Phase 5
+  series and again as a pre-launch gate. Keep `review-logic` on every 5.x.
+
+---
+
+## Research agent — proposed (build next chat)
+
+**Why:** Anthropic's built-in `WebSearch`/`WebFetch` crawler is blocked by some sites
+(Reddit returns "not accessible to our user agent"), so practitioner research on those
+sources is hard with the default tools.
+
+**What I will NOT build:** a user-agent-spoofing / anti-bot-evasion scraper that "appears
+as a normal web user." It's brittle (anti-bot measures change constantly → frequent
+breakage), it risks violating site ToS (Reddit included), and it's an arms race not worth
+maintaining.
+
+**The legitimate path — Claude-in-Chrome:** drive the user's *real* Chrome (logged in as
+them) via the `claude-in-chrome` MCP. That isn't spoofing — it *is* a real human's browser
+session, so it can read what the user can read (Reddit threads, gated forums) and
+navigate/extract legitimately. Requires the Chrome extension connected.
+
+**Proposed design (a "research umbrella," parallel to review):**
+- Default to `WebSearch`/`WebFetch` (fast, no browser) for open content; **escalate to
+  Claude-in-Chrome only** for human-gated sources that block the crawler.
+- Deliverable = a **cited, multi-source research brief**: synthesize across sources, cite
+  each claim, separate consensus from outliers, flag low-confidence/unverified points.
+- Scope it for the "more arduous / extensive research" the user wants, with the same
+  **precision-over-volume** discipline as the review agents.
+- Reddit-specific fallbacks if ever needed: a thread's public `.json` endpoint / old.reddit
+  — but these are increasingly gated; Claude-in-Chrome is the robust path.
