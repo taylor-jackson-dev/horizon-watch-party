@@ -17,8 +17,9 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 > citation-backed research agent under a "research umbrella" parallel to the review
 > umbrella), which registers natively for the first time this session; and socket-server
 > hardening (rate-limit extraction + map-bounding + crash guards, all green / 22 tests)
-> is committed but the branch is 6 commits ahead of origin and UNPUSHED — pushing
-> redeploys the Railway socket server, so push deliberately when you want it live. Start
+> is committed but UNPUSHED — the branch sits several commits ahead of origin, and
+> pushing redeploys the Railway socket server, so push deliberately when you want it
+> live. Start
 > by running the Phase 5.5 two-device live verify (checklist in
 > `journal/PHASE_5_5_INVITE_LINK.md`) on two devices/accounts; if green, mark 5.5
 > verified, then start Phase 5.6 — delight (spotlight reactions + catch-up summary for
