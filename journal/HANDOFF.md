@@ -5,23 +5,28 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 ---
 
-## Resume phrase (paste this first in a new chat)
+## Resume prompt (paste this first to start the next session)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.4.1 are complete + verified live. Phase 5.5 (invite link) is BUILT +
-> static-green and DEPLOYED — awaiting its two-device live verify. The invite link is
-> the room URL (`/room/<code>`), with a copy/native-share button in the room header +
-> on each dashboard card; opening a PUBLIC link auto-joins you (join fires client-side
-> on mount, so Next.js `<Link>` prefetch can't silently enroll a hovering user); PRIVATE
-> links land on a password card; it reuses `/api/rooms/join` (no new route, no
-> migration). FIRST: run the live checklist in `journal/PHASE_5_5_INVITE_LINK.md` on two
-> devices/accounts; if green, mark 5.5 verified, then start Phase 5.6 — delight
-> (spotlight reactions + catch-up summary for latecomers). Read `journal/HANDOFF.md`,
-> `journal/PHASE_5_5_INVITE_LINK.md`, and `PLAN.md` → Phase 5. Deferred: voice settings
-> page + voice-quality work (mic monitoring, background-noise suppression, snappier
-> remote speaking rings — see PLAN backlog), avatar upload, full sync watchdog, live
-> polls, premium theme skins, and the 4th "front-row" cinema view mode (gated on
-> avatars).**
+> Phases 1–5.4.1 are complete + verified live; Phase 5.5 (invite link — room URL
+> `/room/<code>`, copy/native-share button in the room header + dashboard cards, PUBLIC
+> links auto-join client-side/prefetch-safe, PRIVATE links prompt for the password,
+> reuses `/api/rooms/join`, no migration) is built + static-green + deployed, awaiting
+> its two-device live verify. Last session was tooling, not a product phase: built +
+> dogfood-tested + tuned the `researcher` agent (`~/.claude/agents/researcher.md` — a
+> citation-backed research agent under a "research umbrella" parallel to the review
+> umbrella), which registers natively for the first time this session; and socket-server
+> hardening (rate-limit extraction + map-bounding + crash guards, all green / 22 tests)
+> is committed but the branch is 6 commits ahead of origin and UNPUSHED — pushing
+> redeploys the Railway socket server, so push deliberately when you want it live. Start
+> by running the Phase 5.5 two-device live verify (checklist in
+> `journal/PHASE_5_5_INVITE_LINK.md`) on two devices/accounts; if green, mark 5.5
+> verified, then start Phase 5.6 — delight (spotlight reactions + catch-up summary for
+> latecomers). Read `journal/HANDOFF.md`, `journal/PHASE_5_5_INVITE_LINK.md`, and
+> `PLAN.md` → Phase 5. Deferred: voice settings page + voice-quality work (mic
+> monitoring, background-noise suppression, snappier remote speaking rings), avatar
+> upload, full sync watchdog, live polls, premium theme skins, and the 4th "front-row"
+> cinema view mode (gated on avatars).**
 
 ---
 
