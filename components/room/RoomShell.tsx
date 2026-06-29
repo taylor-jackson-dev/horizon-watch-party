@@ -10,6 +10,7 @@ import { ChatPanel } from "./ChatPanel";
 import { ReactionOverlay } from "./ReactionOverlay";
 import { ReactionPicker } from "./ReactionPicker";
 import { PeoplePanel } from "./PeoplePanel";
+import { CatchUpModal } from "./CatchUpModal";
 import {
   MaximizeIcon,
   MinimizeIcon,
@@ -71,6 +72,10 @@ const POSITION_DRIFT_TOLERANCE_SECS = 2.5;
 // event somehow never fires (e.g. network hiccup). Normal path is the
 // onCued callback which is much faster.
 const ITEM_SWITCH_FALLBACK_MS = 1500;
+// A late-joiner only sees the "catch up" modal if the video is already this
+// far in — joining within the first minute isn't really "mid-session," so
+// the modal would just be noise.
+const CATCHUP_MIN_POSITION_SECS = 60;
 
 function dbg(label: string, payload?: unknown): void {
   if (typeof window === "undefined") return;
@@ -131,6 +136,15 @@ export function RoomShell({
   // the player is mid-itemSwitch and the new video hasn't cued. Drained by
   // the effect that watches currentItemId below.
   const [pendingRemoteState, setPendingRemoteState] = useState<VideoSyncState | null>(null);
+  // One-time "you're joining mid-session" summary for late-arriving viewers.
+  // Populated once from the join-ack initial state (see effect below); null
+  // means "don't show." The ref makes the trigger fire at most once per mount.
+  const [catchUp, setCatchUp] = useState<{
+    videoTitle: string | null;
+    positionSecs: number;
+    queueCount: number;
+  } | null>(null);
+  const catchUpShownRef = useRef(false);
 
   const { socket, status: socketStatus, error: socketError, initialState, serverTimeSkewMs, syncEpoch } =
     useRoomSocket(roomId);
@@ -410,6 +424,27 @@ export function RoomShell({
     initialStateAppliedRef.current = true;
     applyRemoteState(initialState);
   }, [isHost, initialState, applyRemoteState]);
+
+  // ── Late-joiner catch-up ────────────────────────────────────────
+  // On the FIRST join only (syncEpoch === 1; a reconnect is epoch ≥ 2 and the
+  // viewer's already oriented), if a video is actively playing well past the
+  // intro, pop a one-time summary so the newcomer knows where things stand.
+  // Position is projected to "now" from the join-ack timestamp the same way
+  // sync does, so the clock the modal shows matches what they're dropped into.
+  useEffect(() => {
+    if (isHost) return;
+    if (syncEpoch !== 1) return;
+    if (catchUpShownRef.current) return;
+    if (!initialState || !initialState.itemId || !initialState.isPlaying) return;
+
+    const serverElapsedMs = Date.now() - serverTimeSkewMs - initialState.updatedAt;
+    const effectivePos = initialState.positionSecs + Math.max(0, serverElapsedMs) / 1000;
+    if (effectivePos < CATCHUP_MIN_POSITION_SECS) return;
+
+    catchUpShownRef.current = true;
+    const title = items.find((i) => i.id === initialState.itemId)?.title ?? null;
+    setCatchUp({ videoTitle: title, positionSecs: effectivePos, queueCount: items.length });
+  }, [isHost, syncEpoch, initialState, serverTimeSkewMs, items]);
 
   // Subscribe to ongoing video:state events (viewer only)
   useEffect(() => {
@@ -847,6 +882,15 @@ export function RoomShell({
           {chatNode}
         </div>
       </aside>
+
+      {catchUp && (
+        <CatchUpModal
+          videoTitle={catchUp.videoTitle}
+          positionSecs={catchUp.positionSecs}
+          queueCount={catchUp.queueCount}
+          onDismiss={() => setCatchUp(null)}
+        />
+      )}
     </div>
   );
 }

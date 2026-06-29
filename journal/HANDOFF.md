@@ -8,23 +8,24 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume prompt (paste this first to start the next session)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.5 are complete + verified live; Phase 5.5 (invite link — room URL
-> `/room/<code>`, copy/native-share button in the room header + dashboard cards, PUBLIC
-> links auto-join client-side/prefetch-safe, PRIVATE links prompt for the password,
-> reuses `/api/rooms/join`, no migration) passed its two-device live verify on
-> 2026-06-29 (at-capacity covered by inspection). Last session was tooling, not a product phase: built +
-> dogfood-tested + tuned the `researcher` agent (`~/.claude/agents/researcher.md` — a
-> citation-backed research agent under a "research umbrella" parallel to the review
-> umbrella), which registers natively for the first time this session; and socket-server
-> hardening (rate-limit extraction + map-bounding + crash guards, all green / 22 tests)
-> is committed but UNPUSHED — the branch sits several commits ahead of origin, and
-> pushing redeploys the Railway socket server, so push deliberately when you want it
-> live. Phase 5.6 — delight (spotlight reactions + catch-up summary for latecomers) —
-> is now in progress; continue it. Read `journal/HANDOFF.md`, `journal/PHASE_5_5_INVITE_LINK.md`, and
-> `PLAN.md` → Phase 5. Deferred: voice settings page + voice-quality work (mic
-> monitoring, background-noise suppression, snappier remote speaking rings), avatar
-> upload, full sync watchdog, live polls, premium theme skins, and the 4th "front-row"
-> cinema view mode (gated on avatars).**
+> Phases 1–5.5 are complete + verified live. Phase 5.6 — delight (spotlight reactions +
+> latecomer catch-up) — is **built + static-green** (review-logic clean · 33 tests ·
+> typecheck/lint/build clean) and **deployed**, now **awaiting its two-device live
+> verify**: run the checklist in `journal/PHASE_5_6_DELIGHT.md` — spam the SAME emoji on
+> two devices (≥3 in ~2s) to pop the centered spotlight; have Account B join a video
+> that's already > 1 min in to get the catch-up modal; confirm the modal does NOT re-pop
+> on reconnect and never shows for the host. Both touches are client-only, no migration:
+> spotlight = a pure detector (`lib/spotlight-reactions.ts`, per-emoji cooldown) feeding
+> a centered overlay layer in `ReactionOverlay`; catch-up = a one-time modal popped from
+> the join-ack `initialState`, gated on `syncEpoch === 1` (initial join, not reconnects).
+> If the live pass is green, mark 5.6 verified — that **closes the Phase 5 series**, so
+> the next move is the phase-*group* `review-code` structural audit (per the review
+> umbrella) before any Phase 6 work. The socket-server hardening held last session
+> (rate-limit extraction + map-bounding + crash guards) is now **pushed + live**. Read
+> `journal/HANDOFF.md`, `journal/PHASE_5_6_DELIGHT.md`, and `PLAN.md` → Phase 5. Deferred:
+> voice settings page + voice-quality work (mic monitoring, background-noise suppression,
+> snappier remote speaking rings), avatar upload, full sync watchdog, live polls, premium
+> theme skins, and the 4th "front-row" cinema view mode (gated on avatars).**
 
 ---
 
@@ -34,7 +35,7 @@ Three **independent** workstreams for the next session — tackle in any order:
 
 1. ✅ **Phase 5.5 live verify DONE (2026-06-29)** — passed on two devices/accounts; at-capacity covered by inspection. **Product is now on Phase 5.6 (delight) — the main open item.**
 2. ✅ **Research agent — BUILT + dogfood-tested + tuned** (2026-06-27). `~/.claude/agents/researcher.md`, under a "research umbrella" parallel to the review umbrella. Smoke-tested via a stand-in (user-authorized), which surfaced 3 refinements — now applied. Full record in `## Research agent — BUILT` near the bottom. First *native* spawn happens after this `/clear`.
-3. ✅ **Socket-server hardening — DONE locally.** Both fix chips + the process-crash guard are committed on `main` and green (typecheck · lint · build · 22 tests): `adccc12` (rate-limit extraction + tests), `1316769` (map-bounding sweep), `7eba2fc` (crash guards + global nets). **Committed but NOT pushed** — a push redeploys the Railway socket server, so the deploy is held for a deliberate batch (these are hardening, not a verify gate). Remaining open items (room:join ACTIVE gap, latent roomHosts staleness, uncaptured Medium/Low cluster) are in `DEFERRED.md → Code Audit Backlog`.
+3. ✅ **Socket-server hardening — DONE locally.** Both fix chips + the process-crash guard are committed on `main` and green (typecheck · lint · build · 22 tests): `adccc12` (rate-limit extraction + tests), `1316769` (map-bounding sweep), `7eba2fc` (crash guards + global nets). **Pushed + live** (2026-06-29) — the Railway socket server redeployed and came back healthy. Remaining open items (room:join ACTIVE gap, latent roomHosts staleness, uncaptured Medium/Low cluster) are in `DEFERRED.md → Code Audit Backlog`.
 
 **Review-system note:** the `review-*` umbrella is complete and `review-code` is approved + tuned (see `## Review system` below). Custom agents only register at startup, so **after this `/clear`, both `review-code` AND the new `researcher` become natively spawnable** as subagents (this session ran review through a general-purpose stand-in; `researcher` has not been spawned at all yet).
 
@@ -113,8 +114,14 @@ theater.
   except **at-capacity**, which couldn't be filled with two accounts and is covered by
   inspection (existing join-route check + a shared error-render branch). See
   `journal/PHASE_5_5_INVITE_LINK.md`.
-- 🔄 **Phase 5.6 — delight** (in progress, started 2026-06-29) — spotlight reactions
-  (3+ same emoji in ~2s → big animated overlay) + a catch-up summary modal for latecomers.
+- 🔄 **Phase 5.6 — delight** (built + static-green + deployed, **awaiting two-device
+  live verify** · 2026-06-29) — spotlight reactions (≥3 same emoji in ~2s → a big centered
+  overlay via a pure unit-tested detector with a per-emoji cooldown) + a catch-up modal
+  for latecomers (one-time, popped from the join-ack `initialState`, gated on the initial
+  join when a video's already > 1 min in — never on reconnect, never for the host). Both
+  client-only, no migration. review-logic clean · 33 tests · typecheck/lint/build green.
+  See `journal/PHASE_5_6_DELIGHT.md`. **This is the last 5.x — clearing its live verify
+  closes Phase 5 → run the phase-group `review-code` audit before Phase 6.**
 
 ---
 

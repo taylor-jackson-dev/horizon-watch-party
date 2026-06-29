@@ -2,6 +2,10 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import type { Socket } from "socket.io-client";
+import {
+  createSpotlightDetector,
+  type SpotlightDetector,
+} from "@/lib/spotlight-reactions";
 
 interface ReactionBurst {
   id: string;
@@ -20,6 +24,12 @@ interface FloatingReaction {
   x1: number;
 }
 
+interface Spotlight {
+  id: string;
+  emoji: string;
+  count: number;
+}
+
 interface ReactionOverlayProps {
   roomId: string;
   socket: Socket | null;
@@ -30,6 +40,9 @@ interface ReactionOverlayProps {
 // 50 is well above any realistic burst but bounds DOM cost in pathological
 // cases (e.g. a client tab backgrounded while reactions queue).
 const MAX_LIVE_REACTIONS = 50;
+// Spotlights are far rarer (gated by the 3-in-2s detector + per-emoji cooldown);
+// a small cap is plenty and keeps overlapping pops from ever stacking deep.
+const MAX_LIVE_SPOTLIGHTS = 6;
 
 function randomBetween(min: number, max: number): number {
   return min + Math.random() * (max - min);
@@ -37,9 +50,13 @@ function randomBetween(min: number, max: number): number {
 
 export function ReactionOverlay({ roomId, socket }: ReactionOverlayProps) {
   const [live, setLive] = useState<FloatingReaction[]>([]);
+  const [spotlights, setSpotlights] = useState<Spotlight[]>([]);
 
   useEffect(() => {
     if (!socket) return;
+    // One detector per room/socket binding; resets when either changes.
+    const detector: SpotlightDetector = createSpotlightDetector();
+
     const onBurst = (b: ReactionBurst) => {
       if (b.roomId !== roomId) return;
       const next: FloatingReaction = {
@@ -57,6 +74,22 @@ export function ReactionOverlay({ roomId, socket }: ReactionOverlayProps) {
         const trimmed = prev.length >= MAX_LIVE_REACTIONS ? prev.slice(1) : prev;
         return [...trimmed, next];
       });
+
+      // A surge of the same emoji pops a celebratory spotlight on top.
+      // Stamp by arrival time so the window reflects what landed together here.
+      const hit = detector.record(b.emoji, Date.now());
+      if (hit) {
+        const spot: Spotlight = {
+          id: `${b.id}-spot`,
+          emoji: hit.emoji,
+          count: hit.count,
+        };
+        setSpotlights((prev) => {
+          const trimmed =
+            prev.length >= MAX_LIVE_SPOTLIGHTS ? prev.slice(1) : prev;
+          return [...trimmed, spot];
+        });
+      }
     };
     socket.on("reaction:burst", onBurst);
     return () => {
@@ -84,6 +117,28 @@ export function ReactionOverlay({ roomId, socket }: ReactionOverlayProps) {
         >
           {r.emoji}
         </span>
+      ))}
+
+      {spotlights.map((s) => (
+        <div
+          key={s.id}
+          className="absolute inset-0 flex items-center justify-center"
+          aria-hidden
+        >
+          <div
+            className="wp-spotlight flex flex-col items-center gap-1"
+            onAnimationEnd={() =>
+              setSpotlights((prev) => prev.filter((x) => x.id !== s.id))
+            }
+          >
+            <span className="text-7xl sm:text-8xl select-none drop-shadow-2xl">
+              {s.emoji}
+            </span>
+            <span className="font-display text-lg sm:text-xl tracking-wide text-gold drop-shadow">
+              ×{s.count}
+            </span>
+          </div>
+        </div>
       ))}
     </div>
   );

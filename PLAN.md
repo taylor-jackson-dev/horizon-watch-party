@@ -3,7 +3,7 @@
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
 > **Last Updated:** 2026-06-29  
 > **Phase:** 5.5 invite link complete + verified live · 5.6 delight (spotlight
-> reactions + latecomer catch-up) now in progress
+> reactions + latecomer catch-up) built + static-green, awaiting two-device live verify
 
 ---
 
@@ -324,8 +324,13 @@ sub-phase closes with the journal + two-device-verify ritual.
   (not during server render) so Next.js `<Link>` prefetch can't silently enroll you;
   **private** links land on a password card. Reuses `/api/rooms/join` (no new route, no
   migration). See `journal/PHASE_5_5_INVITE_LINK.md`.
-- [~] **5.6** Delight — spotlight reactions + catch-up summary for latecomers
-  *(in progress, started 2026-06-29)*.
+- [~] **5.6** Delight — spotlight reactions + catch-up summary for latecomers ✅ built
+  + static-green (review-logic clean · 33 tests · typecheck/lint/build clean), 🔄
+  **awaiting two-device live verify** (2026-06-29). Both client-only, no migration:
+  spotlight = a pure detector (`lib/spotlight-reactions.ts`, 3-same-emoji-in-2s, per-emoji
+  cooldown) feeding a centered overlay layer in `ReactionOverlay`; catch-up = a one-time
+  modal popped from the join-ack `initialState`, gated on the initial join (`syncEpoch === 1`,
+  not reconnects) when a video's already > 1 min in. See `journal/PHASE_5_6_DELIGHT.md`.
 
 **Candidate dispositions (locked at re-scope)**
 - ✅ *Spotlight reactions* — KEPT → 5.6. 3+ same emoji within ~2s triggers a big
@@ -490,19 +495,21 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 5.6: Delight
+## Next Step → Phase 5.6: Delight — two-device live verify
 
-Phases 1–5.5 are shipped + live-verified. **Phase 5.5** (invite link) passed its
-two-device live verify on 2026-06-29 — the invite link is just the room URL
-(`/room/<code>`) with a copy / native-share button in the room header **and** on each
-dashboard room card; **public** links **auto-join** client-side on mount (prefetch-safe),
-**private** links land on a password card, reusing `/api/rooms/join` (no new route, no
-migration). The at-capacity case was the lone item not exercised by hand (can't fill a
-room with two accounts) and is covered by inspection. See
-`journal/PHASE_5_5_INVITE_LINK.md`. Phase 5 order: 5.1 reliability → 5.2 design system →
-5.3 view modes → 5.4 mobile/PWA → 5.4.1 People panel → 5.5 invite link → **5.6 delight
-(in progress)**: spotlight reactions (3+ same emoji in ~2s → a big animated overlay) +
-a catch-up summary modal for latecomers.
+Phases 1–5.5 are shipped + live-verified. **Phase 5.6** (delight) is **built +
+static-green + deployed**, now **awaiting its two-device live verify** — the same gate
+5.5 cleared. Two client-only touches, no migration: **spotlight reactions** (≥3 of the
+same emoji within ~2s → a big centered overlay on top of the float-up reactions, via a
+pure unit-tested detector with a per-emoji cooldown) and a **latecomer catch-up modal**
+(a one-time "you're joining mid-session · now playing X · around MM:SS · N queued"
+popped from the join-ack `initialState`, gated to the initial join when a video is
+already > 1 min in — never on reconnect, never for the host). review-logic came back
+clean (one isolation test added); 33 tests / typecheck / lint / build all green. **Run
+the live checklist in `journal/PHASE_5_6_DELIGHT.md`** (spotlight surge on two devices;
+latecomer modal when Account B joins mid-playback; confirm it does NOT re-pop on
+reconnect). Phase 5 order: 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4
+mobile/PWA → 5.4.1 People panel → 5.5 invite link → **5.6 delight (live-verify pending)**.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both
