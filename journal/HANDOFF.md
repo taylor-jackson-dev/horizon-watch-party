@@ -8,22 +8,19 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 ## Resume prompt (paste this first to start the next session)
 
 > **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.4.1 are complete + verified live; Phase 5.5 (invite link — room URL
+> Phases 1–5.5 are complete + verified live; Phase 5.5 (invite link — room URL
 > `/room/<code>`, copy/native-share button in the room header + dashboard cards, PUBLIC
 > links auto-join client-side/prefetch-safe, PRIVATE links prompt for the password,
-> reuses `/api/rooms/join`, no migration) is built + static-green + deployed, awaiting
-> its two-device live verify. Last session was tooling, not a product phase: built +
+> reuses `/api/rooms/join`, no migration) passed its two-device live verify on
+> 2026-06-29 (at-capacity covered by inspection). Last session was tooling, not a product phase: built +
 > dogfood-tested + tuned the `researcher` agent (`~/.claude/agents/researcher.md` — a
 > citation-backed research agent under a "research umbrella" parallel to the review
 > umbrella), which registers natively for the first time this session; and socket-server
 > hardening (rate-limit extraction + map-bounding + crash guards, all green / 22 tests)
 > is committed but UNPUSHED — the branch sits several commits ahead of origin, and
 > pushing redeploys the Railway socket server, so push deliberately when you want it
-> live. Start
-> by running the Phase 5.5 two-device live verify (checklist in
-> `journal/PHASE_5_5_INVITE_LINK.md`) on two devices/accounts; if green, mark 5.5
-> verified, then start Phase 5.6 — delight (spotlight reactions + catch-up summary for
-> latecomers). Read `journal/HANDOFF.md`, `journal/PHASE_5_5_INVITE_LINK.md`, and
+> live. Phase 5.6 — delight (spotlight reactions + catch-up summary for latecomers) —
+> is now in progress; continue it. Read `journal/HANDOFF.md`, `journal/PHASE_5_5_INVITE_LINK.md`, and
 > `PLAN.md` → Phase 5. Deferred: voice settings page + voice-quality work (mic
 > monitoring, background-noise suppression, snappier remote speaking rings), avatar
 > upload, full sync watchdog, live polls, premium theme skins, and the 4th "front-row"
@@ -35,7 +32,7 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 Three **independent** workstreams for the next session — tackle in any order:
 
-1. **Product (the roadmap):** Phase 5.5 two-device live verify → then Phase 5.6 (delight). This is what the resume phrase above is about. **← still the main open item.**
+1. ✅ **Phase 5.5 live verify DONE (2026-06-29)** — passed on two devices/accounts; at-capacity covered by inspection. **Product is now on Phase 5.6 (delight) — the main open item.**
 2. ✅ **Research agent — BUILT + dogfood-tested + tuned** (2026-06-27). `~/.claude/agents/researcher.md`, under a "research umbrella" parallel to the review umbrella. Smoke-tested via a stand-in (user-authorized), which surfaced 3 refinements — now applied. Full record in `## Research agent — BUILT` near the bottom. First *native* spawn happens after this `/clear`.
 3. ✅ **Socket-server hardening — DONE locally.** Both fix chips + the process-crash guard are committed on `main` and green (typecheck · lint · build · 22 tests): `adccc12` (rate-limit extraction + tests), `1316769` (map-bounding sweep), `7eba2fc` (crash guards + global nets). **Committed but NOT pushed** — a push redeploys the Railway socket server, so the deploy is held for a deliberate batch (these are hardening, not a verify gate). Remaining open items (room:join ACTIVE gap, latent roomHosts staleness, uncaptured Medium/Low cluster) are in `DEFERRED.md → Code Audit Backlog`.
 
@@ -108,12 +105,16 @@ theater.
   userId === LiveKit identity; used everywhere (mobile People tab + desktop rail) so the
   voice call still mounts once. PresencePanel + VoicePanel deleted. Confirmed two-device
   ("Looks good on both ends"). See `journal/PHASE_5_4_MOBILE_PWA.md` §5.4.1.
-- 🔄 **Phase 5.5 — invite link** (built + static-green, **awaiting two-device live
-  verify**) — invite link = the room URL (`/room/<code>`); copy/native-share button in
-  the room header + on each dashboard card; **public** links auto-join (client-side
-  join-on-mount, prefetch-safe), **private** links prompt for the password; reuses
-  `/api/rooms/join` (no new route, no migration). See `journal/PHASE_5_5_INVITE_LINK.md`.
-- 🔄 **Next: Phase 5.6** — delight (spotlight reactions + catch-up summary for latecomers).
+- ✅ **Phase 5.5 — invite link** complete + **verified live** (2026-06-29, two
+  devices/two accounts) — invite link = the room URL (`/room/<code>`); copy/native-share
+  button in the room header + on each dashboard card; **public** links auto-join
+  (client-side join-on-mount, prefetch-safe), **private** links prompt for the password;
+  reuses `/api/rooms/join` (no new route, no migration). Every checklist item green
+  except **at-capacity**, which couldn't be filled with two accounts and is covered by
+  inspection (existing join-route check + a shared error-render branch). See
+  `journal/PHASE_5_5_INVITE_LINK.md`.
+- 🔄 **Phase 5.6 — delight** (in progress, started 2026-06-29) — spotlight reactions
+  (3+ same emoji in ~2s → big animated overlay) + a catch-up summary modal for latecomers.
 
 ---
 

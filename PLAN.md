@@ -1,9 +1,9 @@
 # Watch Party — High-Level Architectural Plan
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
-> **Last Updated:** 2026-06-26  
-> **Phase:** 5.4.1 People panel complete + verified · 5.5 invite link static-green,
-> awaiting two-device live verify
+> **Last Updated:** 2026-06-29  
+> **Phase:** 5.5 invite link complete + verified live · 5.6 delight (spotlight
+> reactions + latecomer catch-up) now in progress
 
 ---
 
@@ -309,21 +309,23 @@ sub-phase closes with the journal + two-device-verify ritual.
   with desktop theater/focus/split and a mobile **tabbed** layout (Chat · Queue ·
   People under a pinned video) all driven purely by CSS. Split tweak: presence/voice
   moved into the rail. Presentation-only. See `journal/PHASE_5_4_MOBILE_PWA.md`.
-- [~] **5.4.1** Combined **People panel** ✅ static-green, **awaiting two-device live
-  verify** — merged the "Watching" roster + "Voice" box into one panel: each viewer is
+- [x] **5.4.1** Combined **People panel** ✅ complete + verified live (2026-06-25) —
+  merged the "Watching" roster + "Voice" box into one panel: each viewer is
   one row (presence dot · name · **mic toggle at the far end**), Join-voice button
   directly below. PTT/open-mic selector removed (deferred to a future voice settings
   page); default is **open-mic, joined muted** — tap your own mic to talk. Keyed on
   userId === LiveKit identity. Used everywhere (mobile People tab + desktop rail), so
   the voice call still mounts once. Presentation-only. See `journal/PHASE_5_4_MOBILE_PWA.md`.
-- [~] **5.5** Invite link ✅ static-green, **awaiting two-device live verify** — the
+- [x] **5.5** Invite link ✅ complete + verified live (2026-06-29; at-capacity case
+  covered by inspection) — the
   invite link is just the room URL (`/room/<code>`), with a copy/native-share button in
   the room header **and** on each dashboard room card. Opening a **public** link
   **auto-joins** and drops you straight in — the join fires **client-side on mount**
   (not during server render) so Next.js `<Link>` prefetch can't silently enroll you;
   **private** links land on a password card. Reuses `/api/rooms/join` (no new route, no
   migration). See `journal/PHASE_5_5_INVITE_LINK.md`.
-- [ ] **5.6** Delight — spotlight reactions + catch-up summary for latecomers *(next)*.
+- [~] **5.6** Delight — spotlight reactions + catch-up summary for latecomers
+  *(in progress, started 2026-06-29)*.
 
 **Candidate dispositions (locked at re-scope)**
 - ✅ *Spotlight reactions* — KEPT → 5.6. 3+ same emoji within ~2s triggers a big
@@ -490,19 +492,17 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ## Next Step → Phase 5.6: Delight
 
-Phases 1–5.4.1 are shipped + live-verified. **Phase 5.5** (invite link) is **built +
-static-green, awaiting its two-device live verify**: the invite link is just the room
-URL (`/room/<code>`), with a copy / native-share button in the room header **and** on
-each dashboard room card. Opening a **public** link **auto-joins** you and drops you
-straight into the room — the join fires **client-side on mount** (deliberately not
-during server render, so Next.js `<Link>` prefetch can't silently enroll a hovering
-user); **private** links land on a password card. It reuses the existing
-`/api/rooms/join` route (capacity / banned / ended / reactivation already handled)
-— **no new API route, no DB migration**. See `journal/PHASE_5_5_INVITE_LINK.md`. Phase
-5 order: 5.1 reliability → 5.2 design system → 5.3 view modes → 5.4 mobile/PWA → 5.4.1
-People panel → 5.5 invite link → **5.6 delight** (next). Once 5.5 passes its live pass,
-the next active sub-phase is **5.6**: spotlight reactions (3+ same emoji in ~2s → a big
-animated overlay) + a catch-up summary modal for latecomers.
+Phases 1–5.5 are shipped + live-verified. **Phase 5.5** (invite link) passed its
+two-device live verify on 2026-06-29 — the invite link is just the room URL
+(`/room/<code>`) with a copy / native-share button in the room header **and** on each
+dashboard room card; **public** links **auto-join** client-side on mount (prefetch-safe),
+**private** links land on a password card, reusing `/api/rooms/join` (no new route, no
+migration). The at-capacity case was the lone item not exercised by hand (can't fill a
+room with two accounts) and is covered by inspection. See
+`journal/PHASE_5_5_INVITE_LINK.md`. Phase 5 order: 5.1 reliability → 5.2 design system →
+5.3 view modes → 5.4 mobile/PWA → 5.4.1 People panel → 5.5 invite link → **5.6 delight
+(in progress)**: spotlight reactions (3+ same emoji in ~2s → a big animated overlay) +
+a catch-up summary modal for latecomers.
 
 Carry-over bug still open: **B2** voice mic on mobile Safari (`NotAllowedError`).
 **B3** (YouTube black-screen-on-first-load) and the reconnect desync are both

@@ -1,6 +1,7 @@
 # Phase 5.5 — Invite Link (shareable link · copy / native-share · auto-join)
 
-**Status:** ✅ static-green (typecheck · lint · build) — **awaiting two-device live verify.**
+**Status:** ✅ **complete + verified live** (2026-06-29 · two devices, two accounts). The
+at-capacity path is the one item not exercised live — covered by inspection (see Verification).
 **Live:** web `https://water-party-private-repo.vercel.app` · socket on Railway (deploys on push to `main`).
 
 ---
@@ -89,23 +90,32 @@ Added `isBanned` + `isEnded` derivations.
 - ⚠️ Room/dashboard UI can't be exercised locally (authed session + socket + DB, and
   the phone can't reach localhost). Behavior verified by build/type/lint + reasoning,
   then live. **Two-device live verification is the gate.**
+- ✅ **Live verify PASSED (2026-06-29)** — host (desktop) + invited viewer (phone), two
+  accounts. Every checklist item confirmed green except **at-capacity**, which couldn't
+  be exercised by hand (can't fill a room with two accounts). That path is covered by
+  inspection: the check is the existing `/api/rooms/join` (`activeCount >= capacity` →
+  409 "Room is at capacity", proven since the rooms phase), and JoinGate renders the 409
+  through the **same** error branch every public-room failure uses
+  (`JoinGate.tsx:118-132`). Residual risk = one trivial, shared error-render branch.
 
 ### Live checklist (real phone + desktop, two accounts)
-- [ ] In a room, the header shows an **Invite** button; on the dashboard each room
+- [x] In a room, the header shows an **Invite** button; on the dashboard each room
       card shows one next to **Open**.
-- [ ] Desktop: clicking Invite **copies** the link and flashes "Copied!"; the copied
+- [x] Desktop: clicking Invite **copies** the link and flashes "Copied!"; the copied
       URL is `https://…/room/<code>`.
-- [ ] Phone: tapping Invite opens the **native share sheet** (Messages/WhatsApp/etc).
-- [ ] **Account B (not a member) opens a public room link → lands straight in the room**
+- [x] Phone: tapping Invite opens the **native share sheet** (Messages/WhatsApp/etc).
+- [x] **Account B (not a member) opens a public room link → lands straight in the room**
       (brief "Joining…", no code typing, no dashboard detour).
-- [ ] Account B then appears in the host's People roster / headcount (presence works).
-- [ ] **Private room:** opening the link shows a password card; correct password →
+- [x] Account B then appears in the host's People roster / headcount (presence works).
+- [x] **Private room:** opening the link shows a password card; correct password →
       enters; wrong password → inline error; no password → can't get in.
-- [ ] Full room link → "Room is at capacity" with Back to the lobby (no membership).
-- [ ] A signed-out person opening the link → sign-in → bounced back to the link →
+- [~] Full room link → "Room is at capacity" with Back to the lobby (no membership).
+      **Not exercised live** (can't fill a room with two accounts) — covered by
+      inspection; see the Verification note above.
+- [x] A signed-out person opening the link → sign-in → bounced back to the link →
       auto-joins (public) / password card (private).
-- [ ] Re-opening a link you've already joined just opens the room (no re-join glitch).
-- [ ] Sync / chat / reactions / voice all still work for the invited viewer.
+- [x] Re-opening a link you've already joined just opens the room (no re-join glitch).
+- [x] Sync / chat / reactions / voice all still work for the invited viewer.
 
 ## Follow-ups / known limits
 - **B2 — voice mic on mobile Safari** (`NotAllowedError`) still open (unchanged here).
