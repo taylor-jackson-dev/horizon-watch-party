@@ -7,37 +7,127 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 ## Resume prompt (paste this first to start the next session)
 
-> **Resume Watch Party. App is live at `https://water-party-private-repo.vercel.app`.
-> Phases 1–5.5 are complete + verified live. Phase 5.6 — delight (spotlight reactions +
-> latecomer catch-up) — is **built + static-green** (review-logic clean · 33 tests ·
-> typecheck/lint/build clean) and **deployed**, now **awaiting its two-device live
-> verify**: run the checklist in `journal/PHASE_5_6_DELIGHT.md` — spam the SAME emoji on
-> two devices (≥3 in ~2s) to pop the centered spotlight; have Account B join a video
-> that's already > 1 min in to get the catch-up modal; confirm the modal does NOT re-pop
-> on reconnect and never shows for the host. Both touches are client-only, no migration:
-> spotlight = a pure detector (`lib/spotlight-reactions.ts`, per-emoji cooldown) feeding
-> a centered overlay layer in `ReactionOverlay`; catch-up = a one-time modal popped from
-> the join-ack `initialState`, gated on `syncEpoch === 1` (initial join, not reconnects).
-> If the live pass is green, mark 5.6 verified — that **closes the Phase 5 series**, so
-> the next move is the phase-*group* `review-code` structural audit (per the review
-> umbrella) before any Phase 6 work. The socket-server hardening held last session
-> (rate-limit extraction + map-bounding + crash guards) is now **pushed + live**. Read
-> `journal/HANDOFF.md`, `journal/PHASE_5_6_DELIGHT.md`, and `PLAN.md` → Phase 5. Deferred:
-> voice settings page + voice-quality work (mic monitoring, background-noise suppression,
-> snappier remote speaking rings), avatar upload, full sync watchdog, live polls, premium
-> theme skins, and the 4th "front-row" cinema view mode (gated on avatars).**
+> **Resume Watch Party — this is the FULL-PROJECT AUDIT session (queued 2026-07-10;
+> spec: `journal/HANDOFF.md` → "Full-project audit"). App is live: web
+> `https://water-party-private-repo.vercel.app` (Vercel) · socket
+> `https://water-party-private-repo-production.up.railway.app` (Railway); pushing
+> `main` redeploys BOTH (pre-authorized for green work). Phases 1–5.5 are complete +
+> verified live. Phase 5.6 (spotlight reactions + latecomer catch-up, client-only) is
+> built + static-green + deployed; its **two-device live verify is STILL PENDING**
+> (user-gated — checklist in `journal/PHASE_5_6_DELIGHT.md`; an attempt on 2026-07-10
+> was cut short by Known issue #5; green closes the Phase 5 series). Do NOT wait on
+> that verify — the audit proceeds regardless. This session, in order: **(1)
+> re-acquaint** — read `PLAN.md`, every `journal/*.md`, `DEFERRED.md`, the entire
+> codebase, git history, and live production state; **(2) audit** — spawn
+> `review-code` scoped EXPLICITLY to the whole repository, security surfaces included;
+> **(3) fix pass** — apply the clearly-justified Critical/High remediations under
+> ritual Part A (review-logic on the diff → tests → typecheck/lint/build → push),
+> defer the rest to `DEFERRED.md`; investigate Known issue #5 (mobile Google
+> first-attempt sign-in error — do NOT blind-edit auth, it works on retry); **(4) the
+> headline deliverable** — a fresh-eyes, honest, objectively critical written
+> assessment of the total project: real weaknesses across code/product/operations, an
+> estimated timeline to beta- and launch-ready (derive velocity from git history), and
+> realistic projections of the app's potential — rubric in the audit spec. Deferred
+> (unchanged, do not work on): voice settings page + voice-quality work, avatar
+> upload, full sync watchdog, live polls, premium theme skins, and the 4th
+> "front-row" cinema view mode (gated on avatars).**
 
 ---
 
-## Next-chat agenda (queued 2026-06-27)
+## Next-session agenda (queued 2026-07-10)
 
-Three **independent** workstreams for the next session — tackle in any order:
+One headline job — **the full-project audit** (spec in the next section) — with a few
+satellites around it:
 
-1. ✅ **Phase 5.5 live verify DONE (2026-06-29)** — passed on two devices/accounts; at-capacity covered by inspection. **Product is now on Phase 5.6 (delight) — the main open item.**
-2. ✅ **Research agent — BUILT + dogfood-tested + tuned** (2026-06-27). `~/.claude/agents/researcher.md`, under a "research umbrella" parallel to the review umbrella. Smoke-tested via a stand-in (user-authorized), which surfaced 3 refinements — now applied. Full record in `## Research agent — BUILT` near the bottom. First *native* spawn happens after this `/clear`.
-3. ✅ **Socket-server hardening — DONE locally.** Both fix chips + the process-crash guard are committed on `main` and green (typecheck · lint · build · 22 tests): `adccc12` (rate-limit extraction + tests), `1316769` (map-bounding sweep), `7eba2fc` (crash guards + global nets). **Pushed + live** (2026-06-29) — the Railway socket server redeployed and came back healthy. Remaining open items (room:join ACTIVE gap, latent roomHosts staleness, uncaptured Medium/Low cluster) are in `DEFERRED.md → Code Audit Backlog`.
+1. 🆕 **Full-project audit + fresh-eyes assessment** — the session's main deliverable
+   (user directive, 2026-07-10). See "Full-project audit" below.
+2. 🔄 **Phase 5.6 live verify — PENDING, user-gated.** Attempted 2026-07-10 but cut
+   short: the phone hit the sign-in bug (now Known issue #5), reached the lobby on
+   retry, and the session pivoted before any checklist item was confirmed. Run it
+   whenever the user has both devices — before, during, or after the audit (audit
+   fixes that redeploy don't invalidate the checklist). Green closes Phase 5.
+3. 🐛 **Known issue #5** — mobile Google first-attempt sign-in error. Diagnose before
+   fixing (full detail + hypotheses under Known issues); the Vercel-logs path needs a
+   `VERCEL_TOKEN` from the user. Fold any confirmed fix into the audit's fix pass.
+4. 🧰 **`deploy-triage` skill (candidate)** — user approved the idea: a skill that
+   pulls + triages Vercel (later Railway) production logs, token-auth so agents can
+   run it, built with `skill-creator`. **Build only AFTER manually triaging #3 once**
+   — the manual pass is the blueprint (dogfood-first, same as the researcher agent).
+5. 🔌 **GitHub connector re-auth** — user-side, whenever convenient. The red expired
+   notice is the Claude↔GitHub *harness integration* only; local git + `gh` creds
+   were verified healthy (commits/pushes unaffected).
 
-**Review-system note:** the `review-*` umbrella is complete and `review-code` is approved + tuned (see `## Review system` below). Custom agents only register at startup, so **after this `/clear`, both `review-code` AND the new `researcher` become natively spawnable** as subagents (this session ran review through a general-purpose stand-in; `researcher` has not been spawned at all yet).
+**Agent note:** `review-logic`, `review-code`, and `researcher` are all natively
+spawnable (review-logic ran natively in the 5.6 session; `researcher` still awaits its
+first native spawn — the audit's market-context step is a natural first use).
+
+---
+
+## Full-project audit — spec for the next session (queued 2026-07-10)
+
+**The ask (user, verbatim intent):** re-read the *entire* project — codebase, plan,
+journals, production — fix anything genuinely necessary, then, with fresh eyes, give an
+honest, objectively critical assessment of the total project: its real weaknesses, a
+solid outlook with an estimated timeline, and future projections for the app's
+potential. The review umbrella already slated a `review-code` audit at this
+phase-group boundary; this **widens** it (code audit → total-project assessment) and
+**pulls it forward** — do not wait on the 5.6 live verify.
+
+**1 · Re-acquaint (read first; touch nothing):**
+- `PLAN.md` end-to-end · every `journal/*.md` (PHASE_5_6 last — it holds the pending
+  checklist) · `DEFERRED.md` incl. the Code Audit Backlog.
+- The full source tree: `app/` (pages + API routes) · `components/` (room/ + ui/) ·
+  `lib/` · `server/socket-server.ts` · `prisma/schema.prisma` · `middleware.ts` ·
+  `tests/` · configs (`package.json` scripts, `next.config`, tailwind).
+- Production reality: hit the web URL + socket alive-check
+  (`/socket.io/?EIO=4&transport=polling` → 200 + `0{...}`); note any drift from docs.
+- Velocity data: `git log --format='%ad %s' --date=short` — real dates for the
+  timeline estimate.
+
+**2 · Audit (read-only):**
+- Spawn **`review-code`** with an EXPLICIT whole-repo scope (unscoped, it stops and
+  proposes one — name it: "the entire repository"). Direct it to explicitly cover the
+  security surfaces — NextAuth config (incl. the credentials-provider
+  hashed-password-in-`access_token` design), socket-server auth/rate-limits/room
+  authority, API-route authorization, secrets/env handling — and hand it the known
+  backlog (room:join ACTIVE gap, latent roomHosts staleness, socket Medium/Low
+  cluster) for re-ranking in whole-repo context.
+- Expect its contract: severity-ranked findings (Critical/High/Medium/Low +
+  Strengths) + a prioritized remediation plan + proposed follow-up tasks for approval.
+
+**3 · Fix pass (judgment, not blanket):**
+- Apply the **clearly-justified Critical/High** remediations. Ritual Part A per
+  batch: build → `review-logic` on the diff → apply → unit-test new pure logic →
+  typecheck/lint/build → push. Defer Medium/Low to `DEFERRED.md` with a one-line
+  rationale each. Don't rabbit-hole; the assessment is the deliverable.
+- **Known issue #5** folds in here IF root cause gets confirmed (error code and/or
+  Vercel logs). Sign-in works on retry — do not degrade it on a guess.
+
+**4 · Fresh-eyes assessment — the headline deliverable.** A standalone written report
+(suggested home: `journal/AUDIT_2026_07.md`) + a tight verbal summary in chat. The
+user explicitly asked for honest and objectively critical: no cheerleading, strengths
+only where earned, weaknesses named plainly. Cover at minimum:
+- **Technical:** architecture + coupling; sync-engine correctness and limits
+  (single-host authority, drift handling, reconnect story); security posture; test
+  depth vs. surface (run the suite — unit tests cover pure logic only; no
+  integration/E2E, no CI gate); operational maturity (deploy-on-push to prod, no
+  staging, no monitoring/error-tracking/analytics).
+- **Product:** onboarding + invite loop friction (incl. issue #5's first-impression
+  cost), mobile experience, retention hooks, feature completeness vs. the Phase 6
+  premium sketch, friend-test feedback themes from the journals.
+- **Viability:** scalability ceilings (single Railway socket node, Supabase session
+  pooler, LiveKit free tier, YouTube quota + embed-ToS constraints); competitive
+  context (Teleparty, Discord watch-together, the Kast/Rabbit graveyard) — optionally
+  ground this with a tightly-scoped **`researcher`** brief.
+- **Outlook:** estimated timeline — from git-history velocity — to (a)
+  friends-and-family beta and (b) public-launch-ready, *including* the non-feature
+  work (monitoring, CI, abuse/moderation, ToS/privacy pages); then realistic
+  projections for the app's potential — best case, likely case, and the kill-risks.
+- **Format:** rank everything; separate "fix before more features" from "fine for
+  now"; end with a recommended Phase 6/7 shape.
+
+**5 · Close out:** the ritual, as always — journal the audit session, update
+`PLAN.md` + this handoff (fresh resume block), commit, push, prompt `/clear`.
 
 ---
 
@@ -121,7 +211,9 @@ theater.
   join when a video's already > 1 min in — never on reconnect, never for the host). Both
   client-only, no migration. review-logic clean · 33 tests · typecheck/lint/build green.
   See `journal/PHASE_5_6_DELIGHT.md`. **This is the last 5.x — clearing its live verify
-  closes Phase 5 → run the phase-group `review-code` audit before Phase 6.**
+  closes Phase 5.** Verify attempted 2026-07-10 but cut short by Known issue #5 (mobile
+  sign-in); no checklist item confirmed yet. The phase-group audit is no longer gated on
+  it — the full-project audit (see spec above) runs next session regardless.
 
 ---
 
@@ -150,6 +242,25 @@ theater.
    so the server stopped delivering room broadcasts to the new socket. Re-join on
    every connect + per-attempt token mint + `syncEpoch` reconcile. See
    `journal/PHASE_5_1_SYNC_RELIABILITY.md`.
+5. 🐛 **Mobile Google sign-in — first attempt fails after 2-step auth** (observed
+   2026-07-10 on the phone, against prod). Symptom: completing Google 2FA bounced back
+   to `/signin` with the red "Sign-in failed: <code>" box (NextAuth error redirect —
+   `pages.error: "/signin"`); tapping **Continue with Google** again succeeded
+   instantly → lobby. **Not a 5.6 regression** — auth (`lib/auth.ts`, standard
+   NextAuth v5 + PrismaAdapter + JWT strategy) untouched since setup. Leading
+   hypotheses: **(A)** OAuth state/PKCE cookie dropped across the long mobile 2FA
+   redirect chain → `error=OAuthCallback` (classic Auth.js-on-mobile-Safari class;
+   retry works because Google is already authed — one short hop, cookie survives);
+   **(B)** first-login DB write (`createUser`/`linkAccount` via the Supabase Session
+   pooler) hiccuped on a cold connection → `error=Callback` (retry hits a warm path;
+   would mostly bite first-ever sign-ins). **Disambiguator = the exact error code**
+   (the `?error=` param / the box text / Vercel runtime logs). **Diagnosis path:**
+   user creates a `VERCEL_TOKEN` (Vercel → Account Settings → Tokens), drops it in
+   `.env.local` (gitignored — never commit or paste in chat); then `npx vercel link`
+   + `npx vercel logs` — runtime logs are short-lived, so tail while reproducing on
+   the phone (sign out → Continue with Google). **Do NOT edit auth config before the
+   root cause is confirmed** — sign-in works on retry; don't degrade it. Afterward,
+   codify the flow as the `deploy-triage` skill (agenda item 4).
 
 ---
 

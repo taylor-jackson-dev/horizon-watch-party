@@ -1,9 +1,11 @@
 # Watch Party — High-Level Architectural Plan
 
 > **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
-> **Last Updated:** 2026-06-29  
+> **Last Updated:** 2026-07-10  
 > **Phase:** 5.5 invite link complete + verified live · 5.6 delight (spotlight
 > reactions + latecomer catch-up) built + static-green, awaiting two-device live verify
+> · **next session: full-project audit + fresh-eyes assessment** (spec in
+> `journal/HANDOFF.md`)
 
 ---
 
@@ -495,7 +497,16 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Phase 5.6: Delight — two-device live verify
+## Next Step → Full-project audit (5.6 live verify still open alongside)
+
+**Queued for the next session (2026-07-10, user directive): a full-project audit** —
+re-read everything (code, plan, journals, production), run `review-code` on the whole
+repo, apply the justified Critical/High fixes, then deliver a fresh-eyes, objectively
+critical assessment of the total project with real weaknesses, a timeline estimate,
+and projections. Full spec: `journal/HANDOFF.md` → "Full-project audit." The 5.6
+live verify remains the Phase 5 close gate (user-gated; attempted 2026-07-10, cut
+short by a new mobile sign-in bug — HANDOFF Known issue #5) and can run before,
+during, or after the audit.
 
 Phases 1–5.5 are shipped + live-verified. **Phase 5.6** (delight) is **built +
 static-green + deployed**, now **awaiting its two-device live verify** — the same gate
