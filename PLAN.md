@@ -1,11 +1,13 @@
 # Watch Party — High-Level Architectural Plan
 
-> **Status:** In progress — Phase 5 (re-scoped after friend-test feedback)  
+> **Status:** In progress — Phase 5 nearly closed · **full-project audit COMPLETE** (2026-07-10)  
 > **Last Updated:** 2026-07-10  
-> **Phase:** 5.5 invite link complete + verified live · 5.6 delight (spotlight
-> reactions + latecomer catch-up) built + static-green, awaiting two-device live verify
-> · **next session: full-project audit + fresh-eyes assessment** (spec in
-> `journal/HANDOFF.md`)
+> **Phase:** 5.6 delight built + static-green + deployed, **two-device live verify still
+> pending** (user-gated; green closes Phase 5). **Full-project audit done** — report:
+> `journal/AUDIT_2026_07.md` (0 Critical · 1 High · 9 Medium · 10 Low; fix pass applied
+> same session; ⚠️ **DB password rotation is user-gated and overdue**). Headline: code
+> validated strong; Phase 6 as sketched (ads + premium on a YouTube embed) collides with
+> YouTube developer policy — **read report §6 before starting Phase 6.**
 
 ---
 
@@ -497,16 +499,23 @@ Captured here so they don't get lost. Surface when relevant or when a related ph
 
 ---
 
-## Next Step → Full-project audit (5.6 live verify still open alongside)
+## Next Step → user actions + Phase 6 strategy decision (5.6 live verify still open)
 
-**Queued for the next session (2026-07-10, user directive): a full-project audit** —
-re-read everything (code, plan, journals, production), run `review-code` on the whole
-repo, apply the justified Critical/High fixes, then deliver a fresh-eyes, objectively
-critical assessment of the total project with real weaknesses, a timeline estimate,
-and projections. Full spec: `journal/HANDOFF.md` → "Full-project audit." The 5.6
-live verify remains the Phase 5 close gate (user-gated; attempted 2026-07-10, cut
-short by a new mobile sign-in bug — HANDOFF Known issue #5) and can run before,
-during, or after the audit.
+**The full-project audit ran 2026-07-10** — report in `journal/AUDIT_2026_07.md`
+(assessment, timeline, projections, recommended Phase 6/7 shape), fix pass applied +
+pushed, deferrals in `DEFERRED.md`. What's next, in order:
+
+1. **User actions (blocking, small):** rotate the Supabase DB password (High, overdue);
+   run the 5.6 two-device verify (closes Phase 5); create a `VERCEL_TOKEN` so issue #5
+   (mobile first-attempt sign-in) can be diagnosed from runtime logs.
+2. **Issue #5 diagnosis session** — tail logs while reproducing; capture the `error=`
+   code; fix only after root cause. Then codify as the `deploy-triage` skill.
+3. **Phase 6 strategy decision** — the audit recommends: drop ads entirely, run a
+   YouTube-ToS compliance pass on the overlay features, pull one retention feature
+   forward from Phase 9, ship moderation minimum + close-room, then a small Stripe
+   premium. Read `journal/AUDIT_2026_07.md` §3.2 + §6 before writing any Phase 6 code.
+4. **Pre-Phase-6 gates** (from `DEFERRED.md`): JWT tier refresh, error tracking +
+   staging, `usePlaybackSync` extraction.
 
 Phases 1–5.5 are shipped + live-verified. **Phase 5.6** (delight) is **built +
 static-green + deployed**, now **awaiting its two-device live verify** — the same gate

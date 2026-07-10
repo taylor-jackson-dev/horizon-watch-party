@@ -7,55 +7,55 @@ Bootstrap doc for resuming the build in a fresh chat. Full detail lives in
 
 ## Resume prompt (paste this first to start the next session)
 
-> **Resume Watch Party — this is the FULL-PROJECT AUDIT session (queued 2026-07-10;
-> spec: `journal/HANDOFF.md` → "Full-project audit"). App is live: web
-> `https://water-party-private-repo.vercel.app` (Vercel) · socket
+> **Resume Watch Party. The FULL-PROJECT AUDIT is DONE (2026-07-10) — read
+> `journal/AUDIT_2026_07.md` first (assessment, timeline, Phase 6/7 recommendation),
+> then `DEFERRED.md` → "Code Audit Backlog — whole-repo audit (2026-07-10)". App is
+> live: web `https://water-party-private-repo.vercel.app` (Vercel) · socket
 > `https://water-party-private-repo-production.up.railway.app` (Railway); pushing
-> `main` redeploys BOTH (pre-authorized for green work). Phases 1–5.5 are complete +
-> verified live. Phase 5.6 (spotlight reactions + latecomer catch-up, client-only) is
-> built + static-green + deployed; its **two-device live verify is STILL PENDING**
-> (user-gated — checklist in `journal/PHASE_5_6_DELIGHT.md`; an attempt on 2026-07-10
-> was cut short by Known issue #5; green closes the Phase 5 series). Do NOT wait on
-> that verify — the audit proceeds regardless. This session, in order: **(1)
-> re-acquaint** — read `PLAN.md`, every `journal/*.md`, `DEFERRED.md`, the entire
-> codebase, git history, and live production state; **(2) audit** — spawn
-> `review-code` scoped EXPLICITLY to the whole repository, security surfaces included;
-> **(3) fix pass** — apply the clearly-justified Critical/High remediations under
-> ritual Part A (review-logic on the diff → tests → typecheck/lint/build → push),
-> defer the rest to `DEFERRED.md`; investigate Known issue #5 (mobile Google
-> first-attempt sign-in error — do NOT blind-edit auth, it works on retry); **(4) the
-> headline deliverable** — a fresh-eyes, honest, objectively critical written
-> assessment of the total project: real weaknesses across code/product/operations, an
-> estimated timeline to beta- and launch-ready (derive velocity from git history), and
-> realistic projections of the app's potential — rubric in the audit spec. Deferred
+> `main` redeploys BOTH (pre-authorized for green work). Phases 1–5.5 complete +
+> verified live; the audit fix pass is committed + pushed (42 tests · typecheck ·
+> lint · build green; CI now runs tests + build). Still open, user-gated: **(a)
+> rotate the Supabase DB password (HIGH — overdue; Supabase dashboard → reset, then
+> update `.env.local` + Vercel + Railway env and redeploy); (b) Phase 5.6 two-device
+> live verify** (checklist in `journal/PHASE_5_6_DELIGHT.md`; green closes Phase 5;
+> note the audit changed no 5.6 behavior); **(c) `VERCEL_TOKEN` for Known issue #5**
+> (mobile Google first-attempt sign-in — diagnose from runtime logs while
+> reproducing; capture the `?error=` code; do NOT edit auth before root cause; then
+> build the `deploy-triage` skill). After those: the **Phase 6 strategy decision** —
+> the audit recommends dropping ads (YouTube-ToS collision + category evidence),
+> a compliance pass on the reaction/chat overlays, one retention feature pulled from
+> Phase 9, moderation minimum + close-room, then small Stripe premium — decide with
+> the user before writing Phase 6 code, then the pre-Phase-6 gates in `DEFERRED.md`
+> (JWT tier refresh, error tracking, `usePlaybackSync` extraction). Deferred
 > (unchanged, do not work on): voice settings page + voice-quality work, avatar
 > upload, full sync watchdog, live polls, premium theme skins, and the 4th
 > "front-row" cinema view mode (gated on avatars).**
 
 ---
 
-## Next-session agenda (queued 2026-07-10)
+## Next-session agenda (refreshed 2026-07-10, post-audit)
 
-One headline job — **the full-project audit** (spec in the next section) — with a few
-satellites around it:
-
-1. 🆕 **Full-project audit + fresh-eyes assessment** — the session's main deliverable
-   (user directive, 2026-07-10). See "Full-project audit" below.
-2. 🔄 **Phase 5.6 live verify — PENDING, user-gated.** Attempted 2026-07-10 but cut
-   short: the phone hit the sign-in bug (now Known issue #5), reached the lobby on
-   retry, and the session pivoted before any checklist item was confirmed. Run it
-   whenever the user has both devices — before, during, or after the audit (audit
-   fixes that redeploy don't invalidate the checklist). Green closes Phase 5.
-3. 🐛 **Known issue #5** — mobile Google first-attempt sign-in error. Diagnose before
-   fixing (full detail + hypotheses under Known issues); the Vercel-logs path needs a
-   `VERCEL_TOKEN` from the user. Fold any confirmed fix into the audit's fix pass.
-4. 🧰 **`deploy-triage` skill (candidate)** — user approved the idea: a skill that
-   pulls + triages Vercel (later Railway) production logs, token-auth so agents can
-   run it, built with `skill-creator`. **Build only AFTER manually triaging #3 once**
-   — the manual pass is the blueprint (dogfood-first, same as the researcher agent).
-5. 🔌 **GitHub connector re-auth** — user-side, whenever convenient. The red expired
-   notice is the Claude↔GitHub *harness integration* only; local git + `gh` creds
-   were verified healthy (commits/pushes unaffected).
+1. ✅ ~~**Full-project audit + fresh-eyes assessment**~~ — DONE 2026-07-10. Report:
+   `journal/AUDIT_2026_07.md`. Fix pass applied + pushed (open redirect via new
+   `lib/callback-url.ts`, LEFT-member ACTIVE gates across page/REST/socket/queue,
+   socket payload bounds, room-scoped `markItemPlayed`, CI tests+build). Deferrals
+   in `DEFERRED.md`. `researcher` had its first native spawn (market brief — clean).
+2. ⚠️ **Rotate the Supabase DB password — HIGH, user action, overdue.** The value was
+   committed to `DEFERRED.md` (scrubbed, but it's in git history) and this is the
+   production DB. Supabase dashboard → reset → update `.env.local` + Vercel + Railway.
+3. 🔄 **Phase 5.6 live verify — PENDING, user-gated.** Checklist in
+   `journal/PHASE_5_6_DELIGHT.md`. Green closes Phase 5. The audit fix pass changed
+   no 5.6 behavior (spotlight/catch-up untouched).
+4. 🐛 **Known issue #5** — mobile Google first-attempt sign-in error. Confirmed
+   blocked on data: no `VERCEL_TOKEN` in `.env.local`, repo not Vercel-linked, error
+   code unrecorded. Diagnose before fixing (hypotheses under Known issues). If it
+   recurs before logs exist: **note the red box's error code** — that alone
+   disambiguates. Then `deploy-triage` skill (dogfood the manual pass first).
+5. 🎯 **Phase 6 strategy decision (user + Claude)** — audit recommends reshaping:
+   drop ads, ToS-compliance pass on overlays, one retention feature from Phase 9,
+   moderation minimum + close-room, small Stripe premium. Report §3.2 + §6.
+6. 🔌 **GitHub connector re-auth** — user-side, whenever convenient (harness
+   integration only; local git/`gh` healthy).
 
 **Agent note:** `review-logic`, `review-code`, and `researcher` are all natively
 spawnable (review-logic ran natively in the 5.6 session; `researcher` still awaits its
@@ -63,7 +63,7 @@ first native spawn — the audit's market-context step is a natural first use).
 
 ---
 
-## Full-project audit — spec for the next session (queued 2026-07-10)
+## Full-project audit — spec ✅ EXECUTED 2026-07-10 (kept for reference; deliverables: `journal/AUDIT_2026_07.md` + fix-pass commit + `DEFERRED.md` backlog)
 
 **The ask (user, verbatim intent):** re-read the *entire* project — codebase, plan,
 journals, production — fix anything genuinely necessary, then, with fresh eyes, give an
@@ -295,9 +295,10 @@ project memory `review_agents_umbrella.md`:
   follow-up task chips — it ends with a "Proposed follow-up tasks" list for you to approve.
 - Plus the `/security-review` skill (deep security pass) and the `simplify` skill
   (simplify *changed* code).
-- **Watch Party plan:** first `review-code` audit was a test-drive on
-  `server/socket-server.ts` (findings in `DEFERRED.md`); next at the end of the Phase 5
-  series and again as a pre-launch gate. Keep `review-logic` on every 5.x.
+- **Watch Party plan:** first `review-code` audit test-drove `server/socket-server.ts`
+  (2026-06-27); the **whole-repo audit ran 2026-07-10** (`journal/AUDIT_2026_07.md`) —
+  next `review-code` at the pre-launch gate. A dedicated `/security-review` pass is
+  queued for when Phase 6 ships Stripe webhooks. Keep `review-logic` on every phase.
 
 ---
 
