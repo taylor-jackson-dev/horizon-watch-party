@@ -47,6 +47,12 @@ interface VideoState {
 
 const roomStates = new Map<string, VideoState>();
 
+// Sanity bounds for host-supplied video:state payloads. Positions cap at 48h
+// (well past YouTube's longest archives); item ids are cuids (~25 chars), so
+// 64 is generous headroom without admitting arbitrary-length strings.
+const MAX_POSITION_SECS = 48 * 60 * 60;
+const MAX_ITEM_ID_LENGTH = 64;
+
 // Cached host lookups so we don't hit the DB on every state event.
 // Expired/invalidated by `room:host-changed` (not implemented yet —
 // hostId on the Room model doesn't change in Phase 3).
@@ -240,6 +246,13 @@ io.on("connection", (socket: Socket) => {
         if (member.status === "BANNED") {
           return cb?.({ ok: false, error: "You are banned from this room" });
         }
+        if (member.status !== "ACTIVE") {
+          // LEFT/KICKED members must re-join through the REST join route
+          // (which re-runs the capacity gate) before the socket admits them.
+          // The room page routes non-ACTIVE members through JoinGate, so a
+          // healthy client never hits this branch.
+          return cb?.({ ok: false, error: "Not an active member of this room" });
+        }
 
         const channel = roomChannel(roomId);
         await socket.join(channel);
@@ -332,11 +345,20 @@ io.on("connection", (socket: Socket) => {
           return;
         }
 
-        const positionSecs = typeof payload.positionSecs === "number" && payload.positionSecs >= 0
-          ? payload.positionSecs
-          : 0;
+        // Bound the payload before it enters the cache: this state is stored
+        // and re-broadcast verbatim to every client, so reject non-finite
+        // positions (Infinity/NaN pass a plain >= 0 check) and absurd ids.
+        const positionSecs =
+          typeof payload.positionSecs === "number" &&
+          Number.isFinite(payload.positionSecs) &&
+          payload.positionSecs >= 0
+            ? Math.min(payload.positionSecs, MAX_POSITION_SECS)
+            : 0;
         const isPlaying = !!payload.isPlaying;
-        const itemId = payload.itemId ?? null;
+        const itemId =
+          typeof payload.itemId === "string" && payload.itemId.length <= MAX_ITEM_ID_LENGTH
+            ? payload.itemId
+            : null;
 
         const prev = roomStates.get(roomId);
         const next: VideoState = {
@@ -350,7 +372,7 @@ io.on("connection", (socket: Socket) => {
         // If the item changed, mark the previous one played in the DB.
         // Fire-and-forget; sync broadcast doesn't wait on the write.
         if (prev?.itemId && prev.itemId !== itemId) {
-          void markItemPlayed(prev.itemId).catch((err) => {
+          void markItemPlayed(prev.itemId, roomId).catch((err) => {
             log(`! markItemPlayed failed item=${prev.itemId} ${err instanceof Error ? err.message : err}`);
           });
         }
@@ -569,9 +591,12 @@ io.on("connection", (socket: Socket) => {
   );
 });
 
-async function markItemPlayed(itemId: string): Promise<void> {
+async function markItemPlayed(itemId: string, roomId: string): Promise<void> {
+  // roomId in the where clause scopes the write to the emitter's own room —
+  // without it, a host who obtained another room's queue-item id could flip
+  // that item's played state cross-tenant.
   await prisma.videoQueue.updateMany({
-    where: { id: itemId, hasPlayed: false },
+    where: { id: itemId, roomId, hasPlayed: false },
     data: { hasPlayed: true, playedAt: new Date() },
   });
 }

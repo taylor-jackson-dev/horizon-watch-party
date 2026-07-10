@@ -26,6 +26,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
   });
   if (!member) return notFound("Room not found");
   if (member.status === "BANNED") return forbidden("You are banned from this room");
+  // Non-ACTIVE (LEFT/KICKED) members are outside the room until they re-clear
+  // the join gate — same invariant the room page, socket, and chat enforce.
+  if (member.status !== "ACTIVE") return forbidden("Not an active member of this room");
 
   const items = await prisma.videoQueue.findMany({
     where: { roomId: params.id },

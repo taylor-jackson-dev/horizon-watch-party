@@ -42,7 +42,13 @@ export default async function RoomPage({ params, searchParams }: RoomPageProps) 
 
   if (!room) notFound();
   const membership = room.members[0];
-  const isMember = membership && membership.status !== "BANNED";
+  // Only ACTIVE members get the live room. LEFT/KICKED members fall through
+  // to JoinGate, which re-joins them via POST /api/rooms/join — re-running
+  // the capacity gate — before they re-enter. (Previously any non-BANNED
+  // membership rendered the full shell, so a LEFT member could slip back in
+  // without re-clearing capacity, and the socket/chat layers disagreed on
+  // whether they were "in" the room.)
+  const isMember = membership?.status === "ACTIVE";
   const isBanned = membership?.status === "BANNED";
   const isEnded = Boolean(room.closedAt) || room.status === "ENDED";
   const isHost = isMember && !forceViewer ? isHostRole(membership.role) : false;

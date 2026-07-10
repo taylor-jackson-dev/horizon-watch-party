@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
     return forbidden("You are banned from this room");
   }
 
-  if (!existing) {
+  // Capacity gates anyone who would newly occupy an ACTIVE slot — first-time
+  // joiners AND returning LEFT/KICKED members. Already-ACTIVE members skip it
+  // (they hold a slot; re-joining is idempotent).
+  if (existing?.status !== "ACTIVE") {
     const activeCount = await prisma.roomMember.count({
       where: { roomId: room.id, status: "ACTIVE" },
     });

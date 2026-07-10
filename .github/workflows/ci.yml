@@ -36,3 +36,18 @@ jobs:
 
       - name: Run TypeScript typecheck
         run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build never connects to real services — placeholders keep the
+          # Prisma client + NextAuth config constructible at build time.
+          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+          DIRECT_URL:   "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+          NEXTAUTH_SECRET: "ci-placeholder-secret"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXT_PUBLIC_SOCKET_URL: "http://localhost:3001"
+          NEXT_PUBLIC_APP_URL: "http://localhost:3000"

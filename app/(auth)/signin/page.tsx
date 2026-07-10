@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
+import { sanitizeCallbackUrl } from "@/lib/callback-url";
 import { FilmIcon } from "@/components/ui/icons";
 
 export default async function SignInPage({
@@ -8,12 +9,16 @@ export default async function SignInPage({
 }: {
   searchParams: { callbackUrl?: string; error?: string };
 }) {
+  // Only ever redirect within our own origin: an absolute URL here would let
+  // /signin?callbackUrl=https://evil.example bounce signed-in users off-site.
+  const callbackUrl = sanitizeCallbackUrl(searchParams.callbackUrl);
+
   const session = await auth();
-  if (session?.user) redirect(searchParams.callbackUrl ?? "/dashboard");
+  if (session?.user) redirect(callbackUrl);
 
   async function googleSignIn() {
     "use server";
-    await signIn("google", { redirectTo: searchParams.callbackUrl ?? "/dashboard" });
+    await signIn("google", { redirectTo: callbackUrl });
   }
 
   return (

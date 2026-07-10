@@ -21,8 +21,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     where: { roomId_userId: { roomId: params.id, userId: user.id } },
     select: { role: true, status: true },
   });
-  if (!member || member.status === "BANNED") {
-    return forbidden("You are not a member of this room");
+  if (!member || member.status !== "ACTIVE") {
+    // BANNED, LEFT, and KICKED members are all outside the room; only ACTIVE
+    // members (re-admitted via the join gate) may mutate the queue.
+    return forbidden("You are not an active member of this room");
   }
 
   const item = await prisma.videoQueue.findUnique({
