@@ -98,7 +98,11 @@ npm run lint        # ESLint
 npm run typecheck   # tsc --noEmit
 npm test            # Vitest
 npm run build       # production build
+npm run check:env   # validate env-var shape + DB connectivity before deploying
 ```
+
+Environment variables (and their exact value per environment) are documented in
+[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md); run `npm run check:env` after any change.
 
 CI (GitHub Actions) runs lint, typecheck, tests, and a production build on every
 push.

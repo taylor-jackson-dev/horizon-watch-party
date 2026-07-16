@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:env": "dotenv -e .env.local -- tsx scripts/check-env.ts",
     "db:generate": "prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:push": "dotenv -e .env.local -- prisma db push",
