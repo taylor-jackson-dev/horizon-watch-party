@@ -4,7 +4,7 @@ A cross-platform social viewing app — watch YouTube together in real time with
 synchronized playback, live chat, animated reactions, and opt-in voice. A
 Discord-style virtual movie theater for friends and family.
 
-**Live demo:** https://water-party-private-repo.vercel.app
+**Live demo:** https://horizon-watch-party.vercel.app
 
 > Sign in with Google, create a room, paste a YouTube link, and share the room
 > URL — anyone who opens it drops straight into synced playback.
