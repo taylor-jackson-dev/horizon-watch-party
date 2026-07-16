@@ -1,4 +1,4 @@
-# Watch Party
+# Horizon Watch Party
 
 A cross-platform social viewing app — watch YouTube together in real time with
 synchronized playback, live chat, animated reactions, and opt-in voice. A
@@ -107,8 +107,15 @@ push.
 
 This project was built in documented phases, each with a written journal
 (`journal/`), a code-review pass before it shipped, and live verification on two
-real devices. A full-project audit (architecture, security, and a candid viability
-assessment) lives in `journal/AUDIT_2026_07.md`.
+real devices. The methodology — how the AI-assisted workflow and the layered review
+process actually worked — is written up in
+[`docs/DEVELOPMENT_PROCESS.md`](docs/DEVELOPMENT_PROCESS.md). A full-project audit
+(architecture, security, and a candid viability assessment) lives in
+[`journal/AUDIT_2026_07.md`](journal/AUDIT_2026_07.md).
+
+## License
+
+[MIT](LICENSE).
 
 ## Status & roadmap
 
