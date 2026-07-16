@@ -3,7 +3,22 @@ import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://water-party-private-repo.vercel.app";
+const FALLBACK_APP_URL = "https://horizon-watch-party.vercel.app";
+
+// Resolve metadataBase defensively. `new URL()` throws on malformed input, and an
+// env var pasted without the https:// scheme (or with a stray space/newline) would
+// otherwise crash the whole production build during page-data collection. Normalize
+// a scheme-less value, and fall back to the canonical URL if it's still unparseable.
+function resolveAppUrl(): URL {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const candidate = raw && !/^https?:\/\//i.test(raw) ? `https://${raw}` : raw;
+  try {
+    if (candidate) return new URL(candidate);
+  } catch {
+    /* fall through to the known-good default */
+  }
+  return new URL(FALLBACK_APP_URL);
+}
 
 // Body voice — Inter. Display voice — Oswald (condensed marquee feel).
 // Exposed as CSS variables so the theming engine can swap typefaces later.
@@ -20,16 +35,16 @@ const fontDisplay = Oswald({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_URL),
-  applicationName: "Watch Party",
+  metadataBase: resolveAppUrl(),
+  applicationName: "Horizon Watch Party",
   title: {
-    default: "Watch Party",
-    template: "%s | Watch Party",
+    default: "Horizon Watch Party",
+    template: "%s | Horizon Watch Party",
   },
   description:
     "Watch movies, shows, and videos together with friends and family — in real time.",
   keywords: ["watch party", "watch together", "movies", "streaming", "social viewing"],
-  authors: [{ name: "Watch Party" }],
+  authors: [{ name: "Horizon Watch Party" }],
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -40,7 +55,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Watch Party",
+    title: "Horizon Watch Party",
     statusBarStyle: "black",
   },
 };

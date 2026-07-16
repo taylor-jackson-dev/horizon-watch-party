@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // is wired in app/layout.tsx via metadata.manifest.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Watch Party",
-    short_name: "Watch Party",
+    name: "Horizon Watch Party",
+    short_name: "Horizon",
     description:
       "Watch movies, shows, and videos together with friends and family — in real time.",
     // Installed app opens straight into the lobby (redirects to sign-in if needed).
