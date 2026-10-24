@@ -35,7 +35,7 @@
     "jose": "^6.2.3",
     "livekit-client": "^2.19.0",
     "livekit-server-sdk": "^2.15.4",
-    "nanoid": "^5.0.7",
+    "nanoid": "^5.1.16",
     "next": "14.2.35",
     "next-auth": "^5.0.0-beta.32",
     "react": "^18.3.1",
@@ -44,7 +44,7 @@
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.5.4",
     "tsx": "^4.22.3",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
