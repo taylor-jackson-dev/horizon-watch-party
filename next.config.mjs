@@ -1,23 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Allow avatars from common OAuth providers and Supabase Storage
+    // Only hosts the app actually shows images from. /_next/image will fetch
+    // any URL on these hosts for anyone who asks, so each entry is open to the
+    // whole internet: add an exact hostname (never a wildcard) when a feature
+    // needs one, e.g. this project's own Supabase Storage host for uploads.
     remotePatterns: [
       {
         protocol: "https",
         hostname: "lh3.googleusercontent.com", // Google OAuth avatars
-      },
-      {
-        protocol: "https",
-        hostname: "cdn.discordapp.com", // Discord OAuth avatars
-      },
-      {
-        protocol: "https",
-        hostname: "avatars.githubusercontent.com", // GitHub OAuth avatars
-      },
-      {
-        protocol: "https",
-        hostname: "*.supabase.co", // Supabase Storage (avatars, uploads)
       },
       {
         protocol: "https",
